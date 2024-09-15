@@ -1,0 +1,40 @@
+{
+    "BE": {
+        "nodes": {
+            "NoSQL": {
+                "MongoDB": [
+                    {
+                        "sectionTitle": "1. MongoDB 시작하기",
+                        "description": []
+                    },
+                    {
+                        "sectionTitle": "2. 고급 MongoDB 기능",
+                        "description": []
+                    }
+                ]
+            },
+            "API": {
+                "Authentication": {
+                    "JWT": [
+                        {
+                            "sectionTitle": "1. JWT를 활용한 인증",
+                            "description": []
+                        }
+                    ],
+                    "OAuth": [
+                        {
+                            "sectionTitle": "1. OAuth 2.0 이해하기",
+                            "description": []
+                        }
+                    ]
+                }
+            }
+        },
+        "edges": [
+            {
+                "from": "NoSQL",
+                "to": "API"
+            }
+        ]
+    }
+}
