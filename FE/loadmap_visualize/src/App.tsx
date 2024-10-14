@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
-import FlowChart from './components/FlowChart';
-import SkillTreeFlow from './components/SkillTreeFlow';
+// src/App.tsx
+import React, { useEffect, useState, useCallback } from 'react';
+import Flow from './Flow';
+import './App.css';
+import Graph from './Graph';
+
 
 
 const App: React.FC = () => {
   return (
-    <div className="flex flex-col h-screen">
-      <SkillTreeFlow />
+    <div >
+      <Graph />
     </div>
   );
 };

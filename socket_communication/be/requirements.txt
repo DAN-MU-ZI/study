@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+websockets
+nest_asyncio
+requests
+pydantic
+langchain
+langchain-openai
+langgraph
+beautifulsoup4
+html5lib
+langchain_community
+playwright
+greenlet
+pytest-playwright
