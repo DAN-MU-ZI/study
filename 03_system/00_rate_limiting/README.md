@@ -41,10 +41,10 @@
   </tr>
   <tr>
     <td align="center">
-      <img src="./assets/architecture_single.svg" width="90%" />
+      <img src="./assets/architecture_single.svg"/>
     </td>
     <td align="center">
-      <img src="./assets/architecture_multi.svg" width="90%" />
+      <img src="./assets/architecture_multi.svg"/>
     </td>
   </tr>
 </table>
