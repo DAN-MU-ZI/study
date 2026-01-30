@@ -1,0 +1,70 @@
+services:
+  nginx:
+    image: nginx:alpine
+    platform: linux/amd64
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api1
+      - api2
+      - api3
+
+  api1:
+    build: .
+    platform: linux/amd64
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SERVER_ID=api1
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  api2:
+    build: .
+    platform: linux/amd64
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SERVER_ID=api2
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  api3:
+    build: .
+    platform: linux/amd64
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SERVER_ID=api3
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    platform: linux/amd64
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  test:
+    build: .
+    platform: linux/amd64
+    command: pytest tests/ -v
+    environment:
+      - API_HOST=nginx
+      - API_PORT=80
+    volumes:
+      - ./tests:/app/tests
+    depends_on:
+      - nginx
+    profiles:
+      - test

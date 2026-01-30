@@ -1,0 +1,39 @@
+services:
+  api:
+    build: .
+    platform: linux/amd64
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    platform: linux/amd64
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  test:
+    image: python:3.11-slim
+    platform: linux/amd64
+    working_dir: /tests
+    command: >
+      sh -c "pip install httpx pytest pytest-asyncio && pytest -v"
+    environment:
+      - API_HOST=api
+      - API_PORT=8080
+    volumes:
+      - ./tests:/tests
+    depends_on:
+      - api
+    profiles:
+      - test
