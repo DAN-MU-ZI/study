@@ -42,9 +42,30 @@ Sliding Window는 "현재 시점으로부터 과거 60초"를 매번 계산하�
 
 ## 구현 과정
 
-### 1. 동작 흐름 (Middleware Logic)
+### 1. 시스템 아키텍처
 
-![Middleware Flow](./assets/middleware_flow.svg)
+로컬 PC에서 Docker Compose로 단일 서버와 다중 서버(Nginx 로드밸런싱) 환경을 각각 구성하여 비교했음.
+
+<div align="center">
+  <table width="100%">
+    <tr>
+      <th width="50%">단일 서버 (Single Server)</th>
+      <th width="50%">다중 서버 (Multi Server)</th>
+    </tr>
+    <tr>
+      <td align="center">
+        <img src="./assets/architecture_single.svg" width="600px" />
+      </td>
+      <td align="center">
+        <img src="./assets/architecture_multi.svg" width="600px" />
+      </td>
+    </tr>
+  </table>
+</div>
+
+### 2. 동작 흐름 (Middleware Logic)
+
+<img src="./assets/middleware_flow.svg" width="800px" />
 
 *   **Client**: 요청 전송
 *   **API Server (Middleware)**: 비즈니스 로직 실행 전, 먼저 Redis와 통신하여 한도 체크
