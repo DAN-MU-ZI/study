@@ -34,20 +34,22 @@
 
 ### 아키텍처 비교
 
-<table width="100%">
-  <tr>
-    <th width="50%">단일 서버 (Single Server)</th>
-    <th width="50%">다중 서버 (Multi Server)</th>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="./assets/architecture_single.svg"/>
-    </td>
-    <td align="center">
-      <img src="./assets/architecture_multi.svg"/>
-    </td>
-  </tr>
-</table>
+<div align="center">
+  <table width="100%">
+    <tr>
+      <th width="50%">단일 서버 (Single Server)</th>
+      <th width="50%">다중 서버 (Multi Server)</th>
+    </tr>
+    <tr>
+      <td align="center">
+        <img src="./assets/architecture_single.svg" width="90%" />
+      </td>
+      <td align="center">
+        <img src="./assets/architecture_multi.svg" width="90%" />
+      </td>
+    </tr>
+  </table>
+</div>
 
 ---
 
