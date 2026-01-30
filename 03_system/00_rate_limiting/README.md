@@ -42,10 +42,10 @@
     </tr>
     <tr>
       <td align="center">
-        <img src="./assets/architecture_single.svg" width="90%" />
+        <img src="./assets/architecture_single.svg" width="600px" />
       </td>
       <td align="center">
-        <img src="./assets/architecture_multi.svg" width="90%" />
+        <img src="./assets/architecture_multi.svg" width="600px" />
       </td>
     </tr>
   </table>
