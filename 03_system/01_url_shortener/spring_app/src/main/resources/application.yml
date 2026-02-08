@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: url-shortener
+  
+  r2dbc:
+    url: ${SPRING_R2DBC_URL:r2dbc:postgresql://db:5432/shortener_db}
+    username: user
+    password: password
+    pool:
+      initial-size: 100
+      max-size: 500
+  sql:
+    init:
+      mode: always
+
+  data:
+    redis:
+      url: redis://redis:6379
+
+server:
+  port: 8001
+
+app:
+  redirect-mode: 302

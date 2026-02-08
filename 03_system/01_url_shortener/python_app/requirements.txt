@@ -1,0 +1,14 @@
+FASTAPI
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+pydantic-settings
+asyncpg
+greenlet
+pytest
+pytest-asyncio
+httpx
+aiosqlite
+redis
+gunicorn
+
