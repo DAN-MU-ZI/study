@@ -20,7 +20,7 @@ export default function () {
   const url = `${BASE_URL}/api/v1/data/shorten`;
 
   // 1. Create Short URL
-  const longUrl = `https://example.com/${randomString(10)}`;
+  const longUrl = `https://example.com/${randomString(100)}`;
   const payload = JSON.stringify({ longUrl: longUrl });
   const params = {
     headers: {

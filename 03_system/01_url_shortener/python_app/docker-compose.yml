@@ -50,9 +50,6 @@ services:
       - ../scripts:/scripts
     environment:
       - BASE_URL=http://app:8000
-    depends_on:
-      app:
-        condition: service_healthy
     command: run /scripts/load_test.js
 
 volumes:
