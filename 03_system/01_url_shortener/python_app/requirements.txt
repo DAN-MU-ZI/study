@@ -1,5 +1,6 @@
 FASTAPI
 uvicorn[standard]
+hiredis
 sqlalchemy
 psycopg2-binary
 pydantic-settings
@@ -11,4 +12,5 @@ httpx
 aiosqlite
 redis
 gunicorn
-
+uvloop
+orjson

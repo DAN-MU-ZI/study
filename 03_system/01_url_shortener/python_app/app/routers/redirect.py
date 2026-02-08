@@ -1,49 +1,41 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, HTTPException, status, Request, Depends
+from fastapi.responses import RedirectResponse, ORJSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
-from app.database import get_db
-from app.models import UrlMapping
 from app.config import settings
-from app.bloom_filter import short_url_filter
-from app.redis_cache import get_cached_url, set_cached_url
-from app.utils.timer import Timer
+from app.redis_cache import get_redis_client
+from app.database import get_db
+from app.models import URLMapping
 
-router = APIRouter()
+router = APIRouter(default_response_class=ORJSONResponse)
 
 @router.get("/{short_url}")
 async def redirect_to_long(request: Request, short_url: str, db: AsyncSession = Depends(get_db)):
     request_id = getattr(request.state, "request_id", None)
+    cache_key = f"url:{short_url}"
 
-    # 1. Redis 캐시 체크
-    with Timer("redis_lookup", request_id):
-        cached_long_url = await get_cached_url(short_url)
+    # Look Aside 패턴 적용
+    redis_client = get_redis_client()
+
+    # 1. Look Aside: Cache 조회
+    cached_long_url = await redis_client.get(cache_key)
     if cached_long_url:
         return create_redirect_response(cached_long_url)
+
+    # 2. Cache Miss -> DB 조회
+    result = await db.execute(select(URLMapping).where(URLMapping.short_url == short_url))
+    mapping = result.scalar_one_or_none()
+
+    if mapping:
+        # 3. Cache Update (TTL 1시간)
+        await redis_client.set(cache_key, mapping.long_url, ex=3600)
+        return create_redirect_response(mapping.long_url)
     
-    
-    # 2. Bloom Filter Check
-    with Timer("bloom_check", request_id):
-        exists = await short_url_filter.contains(short_url)
+    # 4. Data Not Found
+    raise HTTPException(status_code=404, detail="Short URL not found")
 
-    if not exists:
-        raise HTTPException(status_code=404, detail="Short URL not found")
 
-    # 3. DB 조회
-    with Timer("db_lookup", request_id):
-        stmt = select(UrlMapping).where(UrlMapping.short_url == short_url)
-        result = await db.execute(stmt)
-        mapping = result.scalar_one_or_none()
-
-    if not mapping:
-        raise HTTPException(status_code=404, detail="Short URL not found")
-
-    # 4. 캐시에 저장
-    with Timer("cache_set", request_id):
-        await set_cached_url(short_url, mapping.long_url)
-
-    return create_redirect_response(mapping.long_url)
 
 def create_redirect_response(url: str):
     if settings.REDIRECT_MODE == "301":

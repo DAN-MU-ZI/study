@@ -1,42 +1,32 @@
 import redis.asyncio as redis
+import hiredis
 from app.config import settings
 
-# Redis 연결 풀
-redis_client: redis.Redis = None
-
-async def get_redis() -> redis.Redis:
-    """Redis 클라이언트 반환 (Dependency Injection용)"""
-    return redis_client
+# 전역 변수 선언
+_redis_client: redis.Redis = None
+_pool: redis.ConnectionPool = None
 
 async def init_redis():
     """Redis 연결 초기화 (앱 시작 시 호출)"""
-    global redis_client
+    global _redis_client, _pool
     redis_url = getattr(settings, 'REDIS_URL', 'redis://localhost:6379')
-    # 고부하 상황을 대비해 커넥션 풀 크기를 늘림 (기본값은 10개 내외일 수 있음)
-    redis_client = redis.from_url(
-        redis_url, 
+    
+    _pool = redis.ConnectionPool.from_url(
+        redis_url,
         decode_responses=True,
-        max_connections=500  # 커넥션 풀 대폭 증설
+        max_connections=1000,
     )
-    print(f"[Redis] Connected to {redis_url} (max_connections=500)")
+    
+    _redis_client = redis.Redis(connection_pool=_pool)
 
 async def close_redis():
-    """Redis 연결 종료 (앱 종료 시 호출)"""
-    global redis_client
-    if redis_client:
-        await redis_client.close()
-        print("[Redis] Connection closed")
+    """Redis 연결 종료"""
+    global _redis_client, _pool
+    if _redis_client:
+        await _redis_client.close()
+    if _pool:
+        await _pool.disconnect()
 
-# URL 캐싱 함수들
-CACHE_TTL = 3600  # 1시간
-
-async def get_cached_url(short_url: str) -> str | None:
-    """캐시에서 Long URL 조회"""
-    if redis_client:
-        return await redis_client.get(f"url:{short_url}")
-    return None
-
-async def set_cached_url(short_url: str, long_url: str):
-    """캐시에 URL 저장"""
-    if redis_client:
-        await redis_client.setex(f"url:{short_url}", CACHE_TTL, long_url)
+def get_redis_client() -> redis.Redis:
+    global _redis_client
+    return _redis_client
