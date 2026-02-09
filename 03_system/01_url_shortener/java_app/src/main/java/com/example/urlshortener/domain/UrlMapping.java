@@ -1,31 +1,28 @@
 package com.example.urlshortener.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.time.LocalDateTime;
 
-@Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "url_mappings")
+@Document(collection = "url_mappings")
 public class UrlMapping {
 
     @Id
-    @Column(name = "short_url", nullable = false)
     private String shortUrl;
 
-    @Column(name = "long_url", nullable = false)
+    @Field("long_url")
     private String longUrl;
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @CreatedDate
+    @Field("created_at")
     private LocalDateTime createdAt;
 
     public UrlMapping(String shortUrl, String longUrl) {

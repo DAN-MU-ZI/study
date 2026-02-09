@@ -9,9 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
-import java.util.Optional;
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -25,7 +23,6 @@ public class UrlShortenerService {
     private static final int MAX_RETRIES = 5;
     private static final long TTL_SECONDS = 3600;
 
-    @Transactional
     public String shortenUrl(String longUrl) {
         String salt = "";
         
@@ -37,24 +34,22 @@ public class UrlShortenerService {
             String candidateShort = hashGenerator.generateShortUrl(longUrl + salt, 7);
 
             try {
-                // Write-Through pattern: Save to DB first
-                 if (urlMappingRepository.existsById(candidateShort)) {
-                    log.warn("Collision detected for shortUrl: {}", candidateShort);
-                    continue;
+                // Check if exists
+                if (urlMappingRepository.existsById(candidateShort)) {
+                     log.warn("Collision detected for shortUrl: {}", candidateShort);
+                     continue;
                 }
-                
+
                 UrlMapping mapping = new UrlMapping(candidateShort, longUrl);
                 urlMappingRepository.save(mapping);
 
                 // Cache Update
-                String cacheKey = "url:" + candidateShort;
-                redisTemplate.opsForValue().set(cacheKey, longUrl, Duration.ofSeconds(TTL_SECONDS));
+                redisTemplate.opsForValue().set("url:" + candidateShort, longUrl, Duration.ofSeconds(TTL_SECONDS));
 
                 return candidateShort;
 
             } catch (Exception e) {
                 log.error("Error saving URL mapping", e);
-                // Retry with new salt
             }
         }
         
