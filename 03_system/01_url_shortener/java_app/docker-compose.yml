@@ -34,11 +34,6 @@ services:
     volumes:
       - redis_data_java:/data
     command: redis-server --save "" --appendonly no --maxmemory 512mb --maxmemory-policy allkeys-lru
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 512M
 
   k6:
     image: grafana/k6
