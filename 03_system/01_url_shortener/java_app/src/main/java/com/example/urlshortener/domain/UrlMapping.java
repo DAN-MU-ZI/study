@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 public class UrlMapping {
 
     @Id
-    private String shortUrl;
+    private Long id;
 
     @Field("long_url")
     private String longUrl;
@@ -25,8 +25,8 @@ public class UrlMapping {
     @Field("created_at")
     private LocalDateTime createdAt;
 
-    public UrlMapping(String shortUrl, String longUrl) {
-        this.shortUrl = shortUrl;
+    public UrlMapping(Long id, String longUrl) {
+        this.id = id;
         this.longUrl = longUrl;
     }
 }

@@ -2,28 +2,32 @@ package com.example.urlshortener.service;
 
 import org.springframework.stereotype.Service;
 
-import java.nio.charset.StandardCharsets;
-import java.util.zip.CRC32;
-
 @Service
 public class HashGenerator {
 
-    public String generateShortUrl(String longUrl, int length) {
-        CRC32 crc = new CRC32();
-        crc.update(longUrl.getBytes(StandardCharsets.UTF_8));
-        long hash = crc.getValue();
+    private static final String BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-        String hex = Long.toHexString(hash);
+    public String encode(long id) {
+        StringBuilder sb = new StringBuilder();
+        long num = id;
         
-        if (hex.length() < length) {
-            StringBuilder sb = new StringBuilder();
-            while (sb.length() < length - hex.length()) {
-                sb.append('0');
-            }
-            sb.append(hex);
-            return sb.toString();
-        } else {
-            return hex.substring(0, length);
+        if (num == 0) {
+            return String.valueOf(BASE62.charAt(0));
         }
+
+        while (num > 0) {
+            sb.append(BASE62.charAt((int) (num % 62)));
+            num /= 62;
+        }
+
+        return sb.reverse().toString();
+    }
+
+    public long decode(String str) {
+        long result = 0;
+        for (int i = 0; i < str.length(); i++) {
+            result = result * 62 + BASE62.indexOf(str.charAt(i));
+        }
+        return result;
     }
 }

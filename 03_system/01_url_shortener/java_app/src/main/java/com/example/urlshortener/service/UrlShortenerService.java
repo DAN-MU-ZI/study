@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
-import java.util.Random;
 
 @Slf4j
 @Service
@@ -19,41 +18,25 @@ public class UrlShortenerService {
     private final UrlMappingRepository urlMappingRepository;
     private final HashGenerator hashGenerator;
     private final RedisTemplate<String, String> redisTemplate;
+    private final SequenceGeneratorService sequenceGeneratorService;
 
-    private static final int MAX_RETRIES = 5;
     private static final long TTL_SECONDS = 3600;
 
     public String shortenUrl(String longUrl) {
-        String salt = "";
-        
-        for (int i = 0; i < MAX_RETRIES; i++) {
-            if (i > 0) {
-                salt = generateRandomSalt();
-            }
+        // 1. Generate unique ID
+        long id = sequenceGeneratorService.generateSequence("url_sequence");
 
-            String candidateShort = hashGenerator.generateShortUrl(longUrl + salt, 7);
+        // 2. Encode ID to Base62 (shortUrl)
+        String shortUrl = hashGenerator.encode(id);
 
-            try {
-                // Check if exists
-                if (urlMappingRepository.existsById(candidateShort)) {
-                     log.warn("Collision detected for shortUrl: {}", candidateShort);
-                     continue;
-                }
+        // 3. Save to DB (using Long ID)
+        UrlMapping mapping = new UrlMapping(id, longUrl);
+        urlMappingRepository.save(mapping);
 
-                UrlMapping mapping = new UrlMapping(candidateShort, longUrl);
-                urlMappingRepository.save(mapping);
+        // 4. Cache Update (Key: "url:shortUrl")
+        redisTemplate.opsForValue().set("url:" + shortUrl, longUrl, Duration.ofSeconds(TTL_SECONDS));
 
-                // Cache Update
-                redisTemplate.opsForValue().set("url:" + candidateShort, longUrl, Duration.ofSeconds(TTL_SECONDS));
-
-                return candidateShort;
-
-            } catch (Exception e) {
-                log.error("Error saving URL mapping", e);
-            }
-        }
-        
-        throw new RuntimeException("Failed to generate unique short URL after " + MAX_RETRIES + " attempts");
+        return shortUrl;
     }
 
     public String getOriginalUrl(String shortUrl) {
@@ -66,22 +49,16 @@ public class UrlShortenerService {
         }
 
         // Cache Miss: DB Check
-        UrlMapping mapping = urlMappingRepository.findById(shortUrl)
+        // 1. Decode shortUrl to ID
+        long id = hashGenerator.decode(shortUrl);
+
+        // 2. Find by ID
+        UrlMapping mapping = urlMappingRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Short URL not found"));
 
         // Cache Update
         redisTemplate.opsForValue().set(cacheKey, mapping.getLongUrl(), Duration.ofSeconds(TTL_SECONDS));
 
         return mapping.getLongUrl();
-    }
-
-    private String generateRandomSalt() {
-        String chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        StringBuilder salt = new StringBuilder();
-        Random rnd = new Random();
-        for (int i = 0; i < 4; i++) {
-            salt.append(chars.charAt(rnd.nextInt(chars.length())));
-        }
-        return salt.toString();
     }
 }
