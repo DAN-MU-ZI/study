@@ -6,21 +6,24 @@ import org.springframework.stereotype.Service;
 public class HashGenerator {
 
     private static final String BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    private static final char[] BASE62_CHARS = BASE62.toCharArray();
 
     public String encode(long id) {
-        StringBuilder sb = new StringBuilder();
+        if (id == 0) {
+            return "0";
+        }
+
+        char[] buffer = new char[11];
+        int pos = buffer.length;
         long num = id;
-        
-        if (num == 0) {
-            return String.valueOf(BASE62.charAt(0));
-        }
-
         while (num > 0) {
-            sb.append(BASE62.charAt((int) (num % 62)));
-            num /= 62;
+            long q = num / 62;
+            int r = (int) (num - q * 62);
+            buffer[--pos] = BASE62_CHARS[r];
+            num = q;
         }
 
-        return sb.reverse().toString();
+        return new String(buffer, pos, buffer.length - pos);
     }
 
     public long decode(String str) {
