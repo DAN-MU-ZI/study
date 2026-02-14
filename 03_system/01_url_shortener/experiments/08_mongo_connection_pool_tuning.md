@@ -1,5 +1,7 @@
 # MongoDB 연결 풀 튜닝 실험 (Before/After)
-pinpoint 로 병목을 탐색했을 때, MongoDB에서 병목이 발생했습니다. 그래서 얼마나 병목이 발생하는지 측정하고 연결 풀을 확장하여 성능을 개선해보고자 합니다.![alt text](imgs/image.png)
+pinpoint 로 병목을 탐색했을 때, MongoDB에서 병목이 발생했습니다. 그래서 얼마나 병목이 발생하는지 측정하고 연결 풀을 확장하여 성능을 개선해보고자 합니다.  
+![alt text](imgs/image.png) 
+
 기존 DB-only 부하 테스트에서 최대 지연(max)이 튀는 구간이 보여서, MongoDB 연결 풀 옵션을 명시적으로 조정했을 때 개선되는지 확인했습니다.  
 테스트 의도는 "평균 성능"보다 "tail latency(상위 지연/최대 지연)" 완화 여부 확인입니다.
 
