@@ -1,202 +1,161 @@
-# URL Shortener Project
+﻿# URL Shortener Project
 
-URL 단축기 시스템 설계 및 실습 프로젝트입니다. FastAPI와 PostgreSQL을 기반으로 구현되었으며, 301 vs 302 리디렉션의 차이를 실습하고 대용량 트래픽 처리를 위한 설계를 포함합니다.
-
----
-
-## 📊 시스템 목표값
-
-| 항목 | 목표 값 |
-|------|---------|
-| **일간 쓰기 연산** | 1억 개/일 |
-| **초당 쓰기 연산 (TPS)** | 1,160 TPS |
-| **초당 읽기 연산 (TPS)** | 11,600 TPS (읽기:쓰기 = 10:1) |
-| **운영 기간** | 10년 |
-| **총 레코드 수** | 3,650억 개 (1억 × 365 × 10) |
-| **평균 URL 길이** | 100 bytes |
-| **총 저장 용량** | 36.5 TB |
-| **단축 URL 길이** | 7자리 (Base62: 62⁷ ≈ 3.5조) |
-
-### 해시 함수 전략
-- **CRC32** 해싱 (빠른 속도)
-- **Hex Encoding** (Base62 인코딩 미사용, 단순화)
-- 충돌 발생 시 랜덤 솔트 추가 후 재시도
-- **블룸 필터**로 DB 조회 최적화
+Spring Boot 기반 URL 단축기 시스템입니다.
+현재 기준 구현은 `java_app`이며, MongoDB + Redis 조합과 301/302 리다이렉트 모드 비교를 포함합니다.
 
 ---
 
-## 🎯 실습 시나리오
+## 1) 현재 구현 아키텍처 (Spring 기준)
 
-| # | 시나리오 | 목표 |
-|---|----------|------|
-| 1 | **URL 단축 API** | POST 요청으로 Long URL → Short URL 변환 |
-| 2 | **리디렉션 동작 확인** | Short URL 접속 시 원본 URL로 이동 |
-| 3 | **301 vs 302 비교** | 브라우저 캐싱 동작 차이 확인 |
-| 4 | **블룸 필터 효과** | DB 조회 횟수 감소 확인 |
-| 5 | **부하 테스트** | 1,160 TPS (쓰기), 11,600 TPS (읽기) 목표 달성 |
-| 6 | **트래픽 분석** | 302 모드에서 로그 기반 접속 통계 집계 |
+### 핵심 구성
+- API: Spring Boot (`/api/v1`)
+- DB: MongoDB (`url_mappings`, `database_sequences`)
+- Cache: Redis (키: `url:{short_url}`, TTL 3600초)
+
+### 단축 URL 생성 방식
+- 시퀀스 발급: MongoDB `findAndModify + inc(seq, 1)`
+- 인코딩: Sequence ID를 Base62로 변환
+- 저장 순서:
+  1. MongoDB에 원본 URL 저장
+  2. Redis 캐시에 short->long 매핑 저장
+
+### 리다이렉트 조회 방식
+- Look-aside 캐시
+  1. Redis 조회
+  2. miss면 MongoDB 조회
+  3. hit면 Redis 갱신 후 redirect
+  4. 없으면 404
 
 ---
 
-## 🏗️ 시스템 아키텍처
+## 2) API 명세 (구현 기준)
 
-```mermaid
-flowchart TB
-    subgraph Client["🖥️ Client"]
-        Browser["Browser / curl"]
-    end
+### `POST /api/v1/data/shorten`
+Long URL을 short URL로 변환합니다.
 
-    subgraph Server["⚡ Gunicorn + Uvicorn (4 workers)"]
-        subgraph API["API Endpoints"]
-            POST["/api/v1/data/shorten<br/>POST"]
-            GET["/api/v1/{shortUrl}<br/>GET"]
-        end
-        
-        Hash["CRC32 + Hex<br/>Hash Generator"]
-        ORM["SQLAlchemy ORM"]
-    end
-
-    subgraph Redis["🔴 Redis (port 6379)"]
-        Cache["URL 캐싱<br/>(Short→Long)"]
-        BF1["short_url_filter<br/>(Bloom Filter)"]
-        BF2["long_url_filter<br/>(Bloom Filter)"]
-    end
-
-    subgraph Database["🗄️ PostgreSQL (port 5432)"]
-        Table["url_mappings<br/>├─ id (PK)<br/>├─ short_url<br/>└─ long_url"]
-    end
-
-    Browser --> POST
-    Browser --> GET
-    GET --> Cache
-    Cache -.->|Cache Miss| BF1
-    POST --> BF2
-    POST --> Hash
-    Hash --> BF1
-    BF1 --> ORM
-    ORM --> Table
+요청 예시:
+```json
+{
+  "longUrl": "https://www.google.com"
+}
 ```
 
-
-### URL 단축 플로우
-
-```mermaid
-flowchart TD
-    A["🔗 Long URL 입력"] --> B{"Long URL<br/>블룸 필터 조회"}
-    
-    B -->|"있음 (기존 URL)"| C["DB에서 Short URL 조회"]
-    C --> D["✅ 기존 Short URL 반환"]
-    
-    B -->|"없음 (신규 URL)"| E["1️⃣ CRC32 해싱"]
-    E --> F["2️⃣ Hex 인코딩<br/>(최대 8자리)"]
-    F --> G{"Short URL<br/>블룸 필터 조회"}
-    
-    G -->|"없음"| H["DB INSERT"]
-    H --> I["블룸 필터 업데이트"]
-    I --> J["✅ 새 Short URL 반환"]
-    
-    G -->|"있음 (충돌 가능)"| K["DB 실제 조회"]
-    K -->|"실제 존재"| L["🔄 솔트 추가"]
-    L --> E
-    K -->|"False Positive"| H
+응답 예시:
+```json
+{
+  "shortUrl": "abc123"
+}
 ```
 
-### 리디렉션 플로우
+### `GET /api/v1/{shortUrl}`
+short URL을 long URL로 리다이렉트합니다.
+- `REDIRECT_MODE=302` (기본): `302 Found`
+- `REDIRECT_MODE=301`: `301 Moved Permanently`
 
-```mermaid
-flowchart TD
-    A["🔗 Short URL 요청"] --> B{"Short URL<br/>블룸 필터 조회"}
-    
-    B -->|"없음"| C["❌ 404 Not Found"]
-    
-    B -->|"있음"| D["DB 조회"]
-    D -->|"없음 (False Positive)"| C
-    D -->|"존재"| E{"리디렉션 모드"}
-    
-    E -->|"301"| F["🔀 301 Moved Permanently<br/>(브라우저 캐싱)"]
-    E -->|"302"| G["🔀 302 Found<br/>(트래픽 분석 가능)"]
-```
+### `GET /health`
+헬스체크 엔드포인트입니다.
 
 ---
-## 🚀 프로젝트 실행 방법
+
+## 3) 실행 방법
 
 ### 요구 사항
-- Docker 및 Docker Compose
+- Docker
+- Docker Compose
 
 ### 실행
 ```powershell
-cd d:\project\study\03_system\01_url_shortener\python_app
+cd d:\_Workspace\02_프로젝트\진행중\study\03_system\01_url_shortener\java_app
 docker-compose up --build -d
 ```
 
-서버가 시작되면 다음 주소에서 API를 확인할 수 있습니다:
-- 엔드포인트: `http://localhost:8000/api/v1`
-- 헬스 체크: `http://localhost:8000/`
+### 확인 URL
+- API base: `http://localhost:8000/api/v1`
+- Health: `http://localhost:8000/health`
 
 ---
 
-## 🧪 테스트 방법
+## 4) 수동 테스트
 
-### 1. 단위 테스트 (Unit Tests)
-API의 기능적 정확성을 검증합니다.
 ```powershell
-# 컨테이너 내부에서 실행 (권장)
-docker-compose exec app pytest tests/ -v
-```
-
-### 2. 통합 테스트 (Manual)
-`curl` 또는 API 클라이언트를 사용해 동작을 확인합니다.
-```powershell
-# URL 단축 요청
+# 1) 단축 URL 생성
 curl -X POST http://localhost:8000/api/v1/data/shorten `
   -H "Content-Type: application/json" `
   -d '{"longUrl": "https://www.google.com"}'
 
-# 리디렉션 확인 (반환된 shortUrl 사용)
+# 2) 리다이렉트 확인
 curl -I http://localhost:8000/api/v1/{shortUrl}
-```
-
-### 3. 부하 테스트 (Load Testing)
-`k6`를 사용하여 시스템 성능을 측정합니다.
-```powershell
-# 스크립트 디렉토리로 이동
-cd d:\project\study\03_system\01_url_shortener\scripts
-
-# k6 실행 (100 VUs, 60초간 테스트)
-./run_k6.ps1
-# 또는 직접 실행:
-# k6 run load_test.js
 ```
 
 ---
 
-## 🔍 301 vs 302 실습 가이드
+## 5) 부하 테스트 (k6)
 
-이 프로젝트는 리디렉션 방식에 따른 동작 차이를 비교할 수 있습니다.
+```powershell
+cd d:\_Workspace\02_프로젝트\진행중\study\03_system\01_url_shortener\scripts
+./run_k6.ps1
+```
 
-### 모드 변경 방법
-`docker-compose.yml`에서 `REDIRECT_MODE` 환경 변수를 변경하고 재시작합니다.
+직접 실행 시:
+```powershell
+k6 run load_test.js
+```
+
+---
+
+## 6) 최종 성능 개선 결과 (Spring 기준)
+
+아래 수치는 Spring 실험 결과 문서 기준입니다.
+
+### 측정 환경 (CPU)
+- 운영체제: `Windows 10`
+- 프로세서: `Intel(R) Core(TM) i7-7700HQ CPU @ 2.80GHz, 2808Mhz, 4 코어, 8 논리 프로세서`
+
+### 성능 개선 요약 (Spring 초기 -> Spring 최종)
+- 초기 기준: `experiments/03_spring_boot_mvc.md`
+- 최종 기준: `experiments/07_refact_url_generator.md`
+
+| 항목 | 초기 (Spring MVC) | 최종 (Sequence + Base62) | 개선율 |
+|---|---:|---:|---:|
+| 처리량 (`http_reqs/s`) | 897.63 req/s | 5,982.34 req/s | +566.44% (약 6.66배) |
+| 평균 지연 (`avg`) | 1.04s | 155.94ms | 약 85.01% 감소 |
+| P95 지연 (`p(95)`) | 2.17s | 330.83ms | 약 84.75% 감소 |
+| 실패율 (`http_req_failed`) | 0.00% | 0.00% | 동일 |
+
+### 무엇을 개선해서 빨라졌는가
+- `DB 변경`: PostgreSQL 대비 읽기/쓰기 경로를 MongoDB에 맞춰 단순화 (`experiments/04_replace_mongo_db.md`)
+- `런타임 변경`: Java 21 Virtual Thread 적용으로 동시성 처리 효율 개선 (`experiments/05_virtual_thread.md`)
+- `리소스 확장`: Docker/WSL CPU 코어를 2 -> 4로 확장 (`experiments/06_cpu_scale_up.md`)
+- `핵심 알고리즘 개선`: `Random Salt + Hash` 재시도 방식에서 `Sequence + Base62` 방식으로 변경해 충돌 검증 비용 제거 (트레이드오프: short URL 순서성이 생겨 URL 추측/열거 가능성이 상대적으로 증가) (`experiments/07_refact_url_generator.md`)
+- `캐시/접근 패턴 정리`: Redis Look-aside + write/update 흐름으로 DB hit를 줄이고 tail latency 완화 (`experiments/09_mongo_pool_tuning_on_existing_flow.md`)
+
+### 참고
+- CPU/리소스 스케일업 실험: `experiments/06_cpu_scale_up.md`
+- Mongo 연결 풀 튜닝 반복 측정: `experiments/09_mongo_pool_tuning_on_existing_flow.md`
+
+---
+
+## 7) 301 vs 302 모드 전환
+
+`java_app/docker-compose.yml`의 환경변수로 제어합니다.
+
 ```yaml
 environment:
-  - REDIRECT_MODE=302 # 또는 301
+  - REDIRECT_MODE=${REDIRECT_MODE:-302}
 ```
 
-### 비교 포인트
-
-| 모드 | HTTP 상태 코드 | 브라우저 동작 | 트래픽 분석 |
-|------|----------------|---------------|-------------|
-| **301 Moved Permanently** | 301 | 브라우저가 결과를 캐싱함. 이후 요청은 서버를 거치지 않음. | 불가능 (서버 로그 남지 않음) |
-| **302 Found** (Default) | 302 | 매번 서버에 요청을 보냄. | 가능 (서버 로그로 집계 가능) |
-
-### 트래픽 분석 실습 (302 모드)
-1. 302 모드로 서버 실행
-2. 부하 테스트 실행 (여러 번 리디렉션 요청 발생)
-3. 로그 분석 스크립트 실행
+예시:
 ```powershell
-# Docker 로그를 파일로 저장
-docker-compose logs app > access.log
-
-# 분석 스크립트 실행
-python d:\project\study\03_system\01_url_shortener\scripts\analytics.py access.log
+$env:REDIRECT_MODE="301"
+docker-compose up --build -d
 ```
-실행 결과로 가장 많이 호출된 Short URL Top 20이 출력됩니다.
+
+---
+
+## 8) 로그 분석 스크립트
+
+`scripts/analytics.py`는 아래 패턴 로그를 기대합니다.
+- `ACCESS_LOG: {short_url} -> ...`
+
+현재 Spring 기본 로그 설정에서는 해당 패턴이 자동 출력되지 않으므로,
+스크립트 사용 전 로그 포맷(또는 접근 로그)을 맞춰야 합니다.
