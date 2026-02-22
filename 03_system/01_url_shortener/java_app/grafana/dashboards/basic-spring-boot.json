@@ -1,0 +1,142 @@
+{
+  "title": "Spring Boot Integrated Dashboard",
+  "tags": [
+    "spring-boot",
+    "java",
+    "mongo",
+    "redis"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 16,
+  "refresh": "5s",
+  "panels": [
+    {
+      "title": "HTTP Requests (RPS)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "rate(http_server_requests_seconds_count[1m])",
+          "legendFormat": "{{uri}} ({{status}})"
+        }
+      ]
+    },
+    {
+      "title": "JVM Heap Memory Used",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "jvm_memory_used_bytes{area=\"heap\"}",
+          "legendFormat": "{{id}}"
+        }
+      ]
+    },
+    {
+      "title": "MongoDB Command Execution Rate (per second)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "rate(mongodb_driver_commands_seconds_count[1m])",
+          "legendFormat": "Mongo / {{command}} (status: {{status}})"
+        }
+      ]
+    },
+    {
+      "title": "Redis Command Execution Rate (per second)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "rate(lettuce_command_completion_seconds_count[1m])",
+          "legendFormat": "Redis / {{command}}"
+        }
+      ]
+    },
+    {
+      "title": "MongoDB Connection Pool",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 17
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "mongodb_driver_pool_checkedout",
+          "legendFormat": "Active Connections (Checked Out)"
+        },
+        {
+          "expr": "mongodb_driver_pool_waitqueuesize",
+          "legendFormat": "Wait Queue Size (Pending)"
+        }
+      ]
+    },
+    {
+      "title": "MongoDB Request Duration (Seconds)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 17
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "rate(mongodb_driver_commands_seconds_sum[1m]) / rate(mongodb_driver_commands_seconds_count[1m])",
+          "legendFormat": "Avg Duration - {{command}}"
+        },
+        {
+          "expr": "mongodb_driver_commands_seconds_max",
+          "legendFormat": "Max Duration - {{command}}"
+        }
+      ]
+    }
+  ]
+}
