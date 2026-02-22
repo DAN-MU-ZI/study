@@ -22,7 +22,6 @@ public class UrlShortenerService {
 
     private static final long TTL_SECONDS = 3600;
 
-    @io.micrometer.tracing.annotation.NewSpan("shorten_url_logic")
     public String shortenUrl(String longUrl) {
         // 1. Generate unique ID
         long id = sequenceGeneratorService.generateSequence("url_sequence");
@@ -40,7 +39,6 @@ public class UrlShortenerService {
         return shortUrl;
     }
 
-    @io.micrometer.tracing.annotation.NewSpan("get_original_url_logic")
     public String getOriginalUrl(String shortUrl) {
         String cacheKey = "url:" + shortUrl;
 
