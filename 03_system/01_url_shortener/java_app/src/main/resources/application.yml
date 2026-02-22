@@ -13,6 +13,10 @@ spring:
 server:
   port: 8080
 
+app:
+  snowflake:
+    worker-id: ${APP_SNOWFLAKE_WORKER_ID:0}
+
 management:
   endpoints:
     web:

@@ -8,6 +8,7 @@ services:
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
       - REDIRECT_MODE=${REDIRECT_MODE:-302}
+      - APP_SNOWFLAKE_WORKER_ID=${APP_SNOWFLAKE_WORKER_ID:-0}
     depends_on:
       db:
         condition: service_started

@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 
@@ -18,13 +17,13 @@ public class UrlShortenerService {
     private final UrlMappingRepository urlMappingRepository;
     private final HashGenerator hashGenerator;
     private final RedisTemplate<String, String> redisTemplate;
-    private final SequenceGeneratorService sequenceGeneratorService;
+    private final CustomSnowflakeGenerator customSnowflakeGenerator;
 
     private static final long TTL_SECONDS = 3600;
 
     public String shortenUrl(String longUrl) {
-        // 1. Generate unique ID
-        long id = sequenceGeneratorService.generateSequence("url_sequence");
+        // 1. Generate unique ID (Snowflake: 29bit timestamp + 2bit worker + 11bit sequence)
+        long id = customSnowflakeGenerator.nextId();
 
         // 2. Encode ID to Base62 (shortUrl)
         String shortUrl = hashGenerator.encode(id);
