@@ -30,7 +30,7 @@ public class UrlShortenerService {
 
         // 3. Save to DB (using Long ID)
         UrlMapping mapping = new UrlMapping(id, longUrl);
-        urlMappingRepository.save(mapping);
+        urlMappingRepository.insert(mapping);
 
         // 4. Cache Update (Key: "url:shortUrl")
         redisTemplate.opsForValue().set("url:" + shortUrl, longUrl, Duration.ofSeconds(TTL_SECONDS));
