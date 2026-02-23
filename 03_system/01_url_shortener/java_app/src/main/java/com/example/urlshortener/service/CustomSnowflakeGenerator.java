@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Component
 public class CustomSnowflakeGenerator {
@@ -23,8 +24,9 @@ public class CustomSnowflakeGenerator {
     private static final long TIMESTAMP_SHIFT = SEQUENCE_BITS + WORKER_ID_BITS; // 13
 
     private final long workerId;
-    private long sequence = 0L;
-    private long lastTimestamp = -1L;
+    
+    // 내부 상태를 하나의 AtomicLong으로 관리. 상위 53비트: timestamp, 하위 11비트: sequence
+    private final AtomicLong state = new AtomicLong(0L);
 
     public CustomSnowflakeGenerator(@Value("${app.snowflake.worker-id}") long workerId) {
         if (workerId > MAX_WORKER_ID || workerId < 0) {
@@ -35,29 +37,38 @@ public class CustomSnowflakeGenerator {
         this.workerId = workerId;
     }
 
-    public synchronized long nextId() {
-        long currentTimestamp = getCurrentTimestamp();
-
-        if (currentTimestamp < lastTimestamp) {
-            throw new IllegalStateException("시스템 시간이 역행했습니다.");
-        }
-
-        if (currentTimestamp == lastTimestamp) {
-            sequence = (sequence + 1) & MAX_SEQUENCE;
+    public long nextId() {
+        while (true) {
+            long currentTimestamp = getCurrentTimestamp();
+            long currentState = state.get();
             
-            // ✅ 이제 초당 2,048번을 넘겨야만 이 대기 로직을 탑니다.
-            if (sequence == 0) {
-                currentTimestamp = waitNextSecond(currentTimestamp);
+            long lastTimestamp = currentState >>> SEQUENCE_BITS;
+            long sequence = currentState & MAX_SEQUENCE;
+
+            if (currentTimestamp < lastTimestamp) {
+                throw new IllegalStateException("시스템 시간이 역행했습니다.");
             }
-        } else {
-            sequence = 0L;
+
+            if (currentTimestamp == lastTimestamp) {
+                sequence = (sequence + 1) & MAX_SEQUENCE;
+                
+                // ✅ 이제 초당 2,048번을 넘겨야만 이 대기 로직을 탑니다.
+                if (sequence == 0) {
+                    currentTimestamp = waitNextSecond(lastTimestamp);
+                }
+            } else {
+                sequence = 0L;
+            }
+
+            long nextState = (currentTimestamp << SEQUENCE_BITS) | sequence;
+            
+            // CAS 루프 성공 시 반환
+            if (state.compareAndSet(currentState, nextState)) {
+                return ((currentTimestamp - CUSTOM_EPOCH) << TIMESTAMP_SHIFT)
+                        | (workerId << WORKER_ID_SHIFT)
+                        | sequence;
+            }
         }
-
-        lastTimestamp = currentTimestamp;
-
-        return ((currentTimestamp - CUSTOM_EPOCH) << TIMESTAMP_SHIFT)
-                | (workerId << WORKER_ID_SHIFT)
-                | sequence;
     }
 
     private long getCurrentTimestamp() {
@@ -65,9 +76,10 @@ public class CustomSnowflakeGenerator {
     }
 
     private long waitNextSecond(long currentTimestamp) {
-        while (currentTimestamp <= lastTimestamp) {
-            currentTimestamp = getCurrentTimestamp();
+        long timestamp = getCurrentTimestamp();
+        while (timestamp <= currentTimestamp) {
+            timestamp = getCurrentTimestamp();
         }
-        return currentTimestamp;
+        return timestamp;
     }
 }
