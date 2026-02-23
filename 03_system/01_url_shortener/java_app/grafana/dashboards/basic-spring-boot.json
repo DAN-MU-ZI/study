@@ -137,6 +137,30 @@
           "legendFormat": "Max Duration - {{command}}"
         }
       ]
+    },
+    {
+      "title": "Redis Request Duration (Seconds)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "rate(lettuce_command_completion_seconds_sum[1m]) / rate(lettuce_command_completion_seconds_count[1m])",
+          "legendFormat": "Avg Duration - {{command}}"
+        },
+        {
+          "expr": "lettuce_command_completion_seconds_max",
+          "legendFormat": "Max Duration - {{command}}"
+        }
+      ]
     }
   ]
 }
