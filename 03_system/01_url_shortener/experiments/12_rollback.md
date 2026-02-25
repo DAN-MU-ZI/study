@@ -383,6 +383,14 @@ load_test ✓ [ 100% ] 0012/1000 VUs  5m0s  1000.00 iters/s
 아무리해도 로컬에서 해당 RPS를 충족하기에는 역부족인거 같네요. CPU 경합과 RAM의 한계, WSL 등 많은 요소로 제한이 있습니다. 그래서 다시 EC2로 넘어가겠습니다.
 
 ```
+t3.xlarge
+CPU: 4 cores
+Memory: 16 GiB
+OS: Ubuntu Server 24.04 LTS (HVM), SSD Volume Type
+cost: $0.215/hour
+```
+
+```
 # Add Docker's official GPG key:
 sudo -s
 sudo apt update
@@ -408,9 +416,59 @@ sudo docker run hello-world
 sudo apt install -y git
 ```
 
-이후에 부하테스트를 수행했더니 RST(원격지가 종료)요청을 받아서 요청을 모두 처리하지 못했습니다. 원인은 리눅스의 파일 디스크립터 한도가 1024였고 이 값은 통신에 쓰이는 파일은 소켓파일도 포함이라 최대 1024개의 요청만 처리할 수 있었기 때문입니다. 현재 목표 RPS는 11,000이므로 넉넉하게 2,000으로 설정하겠습니다.
 ```
-# ulimit -n
-1024
-# ulimit -n 20000
+FROM gradle:8-jdk17 AS builder
+WORKDIR /app
+
+COPY build.gradle settings.gradle ./
+RUN gradle dependencies --no-daemon || true
+
+COPY src/ src/
+RUN gradle bootJar --no-daemon
+
+FROM eclipse-temurin:17-jre
+WORKDIR /app
+
+COPY --from=builder /app/build/libs/*.jar app.jar
+EXPOSE 8080
+
+ENTRYPOINT ["java", \
+            "-Xms12g", "-Xmx12g", \
+            "-jar", "app.jar"]
 ```
+
+```
+  █ TOTAL RESULTS
+
+    checks_total.......: 6543636 10902.609484/s
+    checks_succeeded...: 100.00% 6543636 out of 6543636
+    checks_failed......: 0.00%   0 out of 6543636
+
+    ✓ Create status must be 200
+    ✓ Redirect status must be 301 or 302
+
+    HTTP
+    http_req_duration..............: avg=33.76ms  min=8.27ms   med=27.97ms  max=1.39s p(90)=51.6ms   p(95)=65.43ms
+      { expected_response:true }...: avg=33.76ms  min=8.27ms   med=27.97ms  max=1.39s p(90)=51.6ms   p(95)=65.43ms
+    http_req_failed................: 0.00%   0 out of 6543636
+    http_reqs......................: 6543636 10902.609484/s
+
+    EXECUTION
+    dropped_iterations.............: 5126    8.54063/s
+    iteration_duration.............: avg=379.55ms min=164.73ms med=315.98ms max=3.65s p(90)=603.81ms p(95)=756.26ms
+    iterations.....................: 594876  991.146317/s
+    vus............................: 288     min=201          max=1000
+    vus_max........................: 1000    min=1000         max=1000
+
+    NETWORK
+    data_received..................: 1.3 GB  2.2 MB/s
+    data_sent......................: 671 MB  1.1 MB/s
+
+
+
+
+running (10m00.2s), 0000/1000 VUs, 594876 complete and 0 interrupted iterations
+load_test ✓ [======================================] 0000/1000 VUs  10m0s  1000.00 iters/s
+```
+
+10분 수행결과입니다. 목표했던 11,000RPS 를 달성했습니다. 측정 시간을 더 늘렸을 때는 로컬환경에서 k6가 VU를 감당하지 못해 일관성을 얻기 어려웠고, 유효 측정기간의 결과로서 목표를 달성한 것이라 생각됩니다.
