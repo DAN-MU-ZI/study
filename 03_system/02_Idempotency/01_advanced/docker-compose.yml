@@ -1,0 +1,37 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    environment:
+      - SPRING_DATA_REDIS_HOST=redis
+    depends_on:
+      - redis
+    ports:
+      - "8080:8080"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  backend-test:
+    image: gradle:8.5-jdk17
+    working_dir: /workspace
+    volumes:
+      - ./backend:/workspace
+    environment:
+      - SPRING_DATA_REDIS_HOST=redis
+    depends_on:
+      - redis
+    command: >
+      bash -lc "until (echo > /dev/tcp/redis/6379) >/dev/null 2>&1; do sleep 1; done; gradle test --no-daemon"
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      - VITE_API_PROXY_TARGET=http://backend:8080
+    depends_on:
+      - backend
+    ports:
+      - "4173:4173"

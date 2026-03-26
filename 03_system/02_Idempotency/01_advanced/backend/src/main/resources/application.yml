@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: idempotency-advanced
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+
+server:
+  port: 8080
+  error:
+    include-message: always
+
+payment:
+  processing-delay-ms: 700
+  pg-delay-ms: 500
+  seed-order-id: "1001"
+  seed-customer-id: "cust-001"
+  seed-amount: 15000

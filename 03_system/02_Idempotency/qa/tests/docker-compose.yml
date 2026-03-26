@@ -1,0 +1,49 @@
+name: qa-tests
+
+networks:
+  00_baseline_default:
+    external: true
+  01_advanced_default:
+    external: true
+
+volumes:
+  qa_node_modules:
+
+services:
+  playwright-baseline:
+    build:
+      context: .
+    networks:
+      - 00_baseline_default
+    environment:
+      - PLAYWRIGHT_BASE_URL=http://frontend:4173
+      - TARGET_API_URL=http://backend:8080/api/health
+      - REDIS_HOST=none
+      - QA_TARGET=00_baseline
+      - PLAYWRIGHT_SPEC=baseline.spec.ts
+    volumes:
+      - ./test-results:/workspace/test-results
+      - .:/workspace
+      - ../test-cases.csv:/workspace/test-cases.csv:ro
+      - qa_node_modules:/workspace/node_modules
+    working_dir: /workspace
+    command: ["node", "scripts/run-qa-target.mjs"]
+
+  playwright-advanced:
+    build:
+      context: .
+    networks:
+      - 01_advanced_default
+    environment:
+      - PLAYWRIGHT_BASE_URL=http://frontend:4173
+      - TARGET_API_URL=http://backend:8080/api/health
+      - REDIS_HOST=redis
+      - QA_TARGET=01_advanced
+      - PLAYWRIGHT_SPEC=idempotency.spec.ts
+    volumes:
+      - ./test-results:/workspace/test-results
+      - .:/workspace
+      - ../test-cases.csv:/workspace/test-cases.csv:ro
+      - qa_node_modules:/workspace/node_modules
+    working_dir: /workspace
+    command: ["node", "scripts/run-qa-target.mjs"]
