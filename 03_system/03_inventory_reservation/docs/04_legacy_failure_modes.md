@@ -8,13 +8,15 @@
 
 각 케이스는 독립적으로 발생할 수 있다. 순차 단계로 해석하지 않도록 케이스별 다이어그램을 분리한다.
 
-## Case 1(오버셀 위험): Redis 예약 성공 후 MySQL 원장 차감 실패
+## Case 1(언더셀 위험): Redis 예약 성공 후 MySQL 원장 차감 실패
 
 ![Redis Reserve Success and MySQL Claim Failure](../diagrams/legacy-failure-case1-redis-claim-fail.svg)
 
 Mermaid 원본은 [legacy-failure-case1-redis-claim-fail.mmd](../diagrams/legacy-failure-case1-redis-claim-fail.mmd)에 둔다.
 
-Redis에서는 가용 수량이 줄어든다. 결제 성공 후 MySQL 원장 차감이 실패하면 Redis 기준으로는 예약 또는 판매된 것처럼 보이지만 원장은 그대로 남는다.
+Redis에서는 가용 수량이 줄어든다. MySQL 원장 차감이 실패하고 Redis 예약이 남으면 Redis 기준 판매 가능 재고만 줄어든다. 이 구간에서는 실제로 판매 가능한 재고가 예약 상태에 묶이므로 언더셀 위험으로 본다.
+
+단, 결제 성공이 이미 확정됐는데 원장 차감만 실패한 상태라면 나중에 Redis 예약이 해제될 때 같은 재고를 다시 판매할 수 있다. 이 경우는 오버셀 위험으로 전이될 수 있으므로, 실습에서는 결제 확정 여부와 Redis 예약 해제 여부를 함께 기록한다.
 
 관찰할 상태:
 
@@ -23,13 +25,13 @@ Redis에서는 가용 수량이 줄어든다. 결제 성공 후 MySQL 원장 차
 - MySQL 원장의 `claimed_quantity`
 - 예약 로그의 상태
 
-## Case 2(언더셀 위험): MySQL 원장 차감 성공 후 Redis 정리 실패
+## Case 2(오버셀 위험): MySQL 원장 차감 성공 후 Redis 정리 실패
 
 ![MySQL Claim Success and Redis Cleanup Failure](../diagrams/legacy-failure-case2-redis-cleanup-fail.svg)
 
 Mermaid 원본은 [legacy-failure-case2-redis-cleanup-fail.mmd](../diagrams/legacy-failure-case2-redis-cleanup-fail.mmd)에 둔다.
 
-MySQL 원장은 차감된다. 이후 Redis 예약 정리에 실패하면 Redis에는 이미 처리된 예약이 남는다. 만료 처리와 충돌하면 가용 수량이 잘못 복구될 수 있다.
+MySQL 원장은 차감된다. 이후 Redis 예약 정리에 실패하면 Redis에는 이미 처리된 예약이 남는다. 만료 처리에서 해당 예약을 다시 `Release`하면 실제 판매된 재고가 Redis 가용 수량으로 복구된다. 이 구간에서는 같은 재고가 다시 예약될 수 있으므로 오버셀 위험으로 본다.
 
 관찰할 상태:
 

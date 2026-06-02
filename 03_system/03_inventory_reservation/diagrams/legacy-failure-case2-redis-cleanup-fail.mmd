@@ -10,5 +10,5 @@ sequenceDiagram
     DB-->>API: ledger 차감 완료
     API-xRedis: reservation 정리 실패
     Worker->>Redis: TTL 만료 후 Release 처리
-    Note over Redis,DB: 판매된 재고가 Redis에서 다시 복구될 수 있음
-    Note over API: 결과: 오버셀 위험
+    Note over Redis,DB: 판매된 재고가 Redis 가용 수량으로 다시 복구될 수 있음
+    Note over API: 결과: 오버셀 위험(TTL Release 후)

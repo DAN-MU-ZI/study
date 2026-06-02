@@ -19,7 +19,7 @@ Redis에 가용 수량을 저장한다.
 docker compose exec redis redis-cli SET available:1:100:1 100
 ```
 
-## Case 1: Redis 예약 성공 후 MySQL 원장 차감 실패
+## Case 1(언더셀 위험): Redis 예약 성공 후 MySQL 원장 차감 실패
 
 Redis에서 예약을 먼저 성공시킨다.
 
@@ -42,9 +42,10 @@ Get-Content .\labs\sql\01_show_state.sql | docker compose exec -T mysql mysql -u
 
 - Redis 가용 수량은 줄어든다.
 - MySQL 원장은 차감되지 않는다.
-- 이 상태가 오래 유지되면 판매 가능한 재고가 Redis에서만 줄어든다.
+- 이 상태가 오래 유지되면 판매 가능한 재고가 Redis에서만 줄어드는 언더셀 위험이 생긴다.
+- 결제 성공이 이미 확정된 뒤 원장 차감만 실패한 상태라면, Redis 예약 해제 이후에는 오버셀 위험으로 전이될 수 있다.
 
-## Case 2: MySQL 원장 차감 성공 후 Redis 예약 정리 실패
+## Case 2(오버셀 위험): MySQL 원장 차감 성공 후 Redis 예약 정리 실패
 
 초기화한다.
 
@@ -81,7 +82,7 @@ Get-Content .\labs\sql\01_show_state.sql | docker compose exec -T mysql mysql -u
 
 - MySQL 원장은 차감된다.
 - Redis 예약 키는 남는다.
-- 만료 처리에서 Redis 가용 수량을 다시 복구하면 실제 판매된 재고가 다시 예약 가능해질 수 있다.
+- 만료 처리에서 Redis 가용 수량을 다시 복구하면 실제 판매된 재고가 다시 예약 가능해지는 오버셀 위험이 생긴다.
 
 ## Case 3: Claim과 Release 경합
 
