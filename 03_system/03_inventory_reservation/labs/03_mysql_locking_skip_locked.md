@@ -4,6 +4,8 @@
 
 MySQL 세션 2개를 사용해 `FOR UPDATE`와 `FOR UPDATE SKIP LOCKED`의 차이를 확인한다.
 
+![MySQL Lock Wait vs SKIP LOCKED](../diagrams/mysql-lock-wait-vs-skip-locked.svg)
+
 ## 준비
 
 MySQL 데이터를 초기화한다.

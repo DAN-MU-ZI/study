@@ -19,12 +19,40 @@
 
 ## 상태 전이
 
-예약은 다음 흐름을 가진다.
+예약은 결제 전 임시 점유 상태에서 시작해, 결제 결과에 따라 확정 또는 해제로 끝난다.
 
-1. 사용자가 결제 화면에서 재고 예약을 요청한다.
-2. 시스템은 가용 재고가 있으면 예약을 생성한다.
-3. 결제 성공 시 예약은 `Claimed` 상태가 된다.
-4. 결제 실패 또는 만료 시 예약은 `Released` 상태가 된다.
+![Reservation State Transition](../diagrams/reservation-state.svg)
+
+Mermaid 원본은 [reservation-state.mmd](../diagrams/reservation-state.mmd)에 둔다.
+
+### 상태 설명
+
+| 상태 | 의미 | 다음 상태 |
+|---|---|---|
+| `Reserving` | 예약 가능 여부를 확인하는 중 | `Reserved`, `Rejected` |
+| `Reserved` | 결제 대기 중인 임시 재고 점유 상태 | `Claimed`, `Released`, `Expired` |
+| `Claimed` | 결제 성공 후 실제 재고 차감이 확정된 상태 | 종료 |
+| `Released` | 결제 실패 또는 만료로 예약이 해제된 상태 | 종료 |
+| `Expired` | 예약 TTL이 지나 만료 처리가 필요한 상태 | `Released` |
+| `Rejected` | 예약 가능한 재고가 없어 예약이 거절된 상태 | 종료 |
+
+### 단계별 상태 변화
+
+| 단계 | 동작 | 예약 상태 | Redis 레거시 구조 | MySQL 개선 구조 |
+|---|---|---|---|---|
+| 1 | 사용자가 결제 화면에서 예약 요청 | `Reserving` | Redis 가용 수량 확인 | `reservation_units` row 조회 |
+| 2 | 가용 재고 확보 성공 | `Reserved` | Redis 가용 수량 차감, 예약 TTL 저장 | `reservation_units`에서 `reserved_quantities`로 이동 |
+| 3 | 결제 성공 | `Claimed` | MySQL 원장 차감 후 Redis 예약 정리 | MySQL 트랜잭션으로 원장 차감 |
+| 4 | 결제 실패 | `Released` | Redis 가용 수량 복구 | 예약 row 해제 후 보충 대상이 됨 |
+| 5 | TTL 만료 | `Expired` -> `Released` | 만료 처리에서 Redis 가용 수량 복구 | 만료 예약을 해제하고 pool 보충 대상에 반영 |
+| 6 | 가용 재고 부족 | `Rejected` | Redis 차감 실패 또는 보정 필요 | 예약 가능한 row 부족으로 실패 |
+
+### 상태 전이에서 확인할 경합
+
+- `Reserved` 상태에서 `Claimed`와 `Released`가 동시에 시도될 수 있다.
+- `Expired` 처리와 결제 성공 처리가 같은 예약을 대상으로 실행될 수 있다.
+- 레거시 구조에서는 Redis 상태와 MySQL 원장 상태가 서로 다른 시점에 변경된다.
+- 개선 구조에서는 예약 row 이동과 상태 변경을 DB 트랜잭션 안에서 묶는 것을 목표로 한다.
 
 ## 레거시 구조에서의 상태 위치
 

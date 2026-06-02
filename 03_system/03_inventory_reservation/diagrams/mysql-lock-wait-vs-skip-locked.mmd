@@ -1,0 +1,12 @@
+flowchart LR
+    subgraph WAIT["FOR UPDATE"]
+        W1["Session A<br/>unit 1 lock"] --> W2["Session B<br/>same query"]
+        W2 --> W3["unit 1 lock 해제까지 대기"]
+        W3 --> W4["예약 처리 지연"]
+    end
+
+    subgraph SKIP["FOR UPDATE SKIP LOCKED"]
+        S1["Session A<br/>unit 1 lock"] --> S2["Session B<br/>same query"]
+        S2 --> S3["잠긴 unit 1 건너뜀"]
+        S3 --> S4["unit 2 확보"]
+    end

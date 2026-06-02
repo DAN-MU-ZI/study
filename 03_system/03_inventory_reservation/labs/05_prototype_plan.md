@@ -11,6 +11,10 @@
 - 레거시 구현: Redis 기반 예약
 - 개선 구현: MySQL `SKIP LOCKED` 기반 예약
 
+![Legacy Redis Reservation Flow](../diagrams/legacy-redis-flow.svg)
+
+![MySQL Lock Wait vs SKIP LOCKED](../diagrams/mysql-lock-wait-vs-skip-locked.svg)
+
 두 구현은 같은 입력 조건을 받는다.
 
 - `shop_id`

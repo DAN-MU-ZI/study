@@ -1,0 +1,10 @@
+sequenceDiagram
+    participant API as Checkout API
+    participant Redis
+    participant DB as MySQL Ledger
+
+    API->>Redis: Reserve 성공
+    Redis-->>API: available 감소, reservation TTL 저장
+    API-xDB: Claim 실패
+    Note over Redis,DB: Redis는 재고를 잡았지만 MySQL 원장은 차감되지 않음
+    Note over API: 결과: 언더셀 위험

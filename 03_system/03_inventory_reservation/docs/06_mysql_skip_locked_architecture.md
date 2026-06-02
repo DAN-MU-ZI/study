@@ -23,6 +23,10 @@ Mermaid 원본은 [erd.mmd](../diagrams/erd.mmd)에 둔다.
 
 예약 요청은 `reservation_units`에서 필요한 수량만큼 row를 가져온다. 이때 row lock을 잡는다. 이미 다른 트랜잭션이 잠근 row는 `SKIP LOCKED`로 건너뛴다.
 
+![MySQL Lock Wait vs SKIP LOCKED](../diagrams/mysql-lock-wait-vs-skip-locked.svg)
+
+Mermaid 원본은 [mysql-lock-wait-vs-skip-locked.mmd](../diagrams/mysql-lock-wait-vs-skip-locked.mmd)에 둔다.
+
 확보한 row는 `reserved_quantities`에 기록하고, `reservation_units`에서는 제거한다. 이 작업은 하나의 트랜잭션 안에서 처리한다.
 
 ## Claim 흐름

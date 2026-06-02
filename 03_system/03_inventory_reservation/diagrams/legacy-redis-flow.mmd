@@ -1,0 +1,20 @@
+sequenceDiagram
+    participant Checkout
+    participant Redis
+    participant Payment
+    participant MySQL
+
+    Checkout->>Redis: Reserve: available quantity 차감
+    Redis-->>Checkout: reservation id + TTL 저장
+    Checkout->>Payment: 결제 요청
+
+    alt 결제 성공
+        Payment-->>Checkout: success
+        Checkout->>MySQL: Claim: inventory ledger 차감
+        MySQL-->>Checkout: commit
+        Checkout->>Redis: reservation 정리
+    else 결제 실패 또는 만료
+        Payment-->>Checkout: fail or timeout
+        Checkout->>Redis: Release: available quantity 복구
+        Checkout->>Redis: reservation 삭제 또는 만료
+    end

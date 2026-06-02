@@ -1,0 +1,14 @@
+sequenceDiagram
+    participant API as Checkout API
+    participant Redis
+    participant DB as MySQL Ledger
+    participant Worker as Expiry Worker
+
+    API->>Redis: Reserve 성공
+    Redis-->>API: available 감소, reservation TTL 저장
+    API->>DB: Claim 성공
+    DB-->>API: ledger 차감 완료
+    API-xRedis: reservation 정리 실패
+    Worker->>Redis: TTL 만료 후 Release 처리
+    Note over Redis,DB: 판매된 재고가 Redis에서 다시 복구될 수 있음
+    Note over API: 결과: 오버셀 위험

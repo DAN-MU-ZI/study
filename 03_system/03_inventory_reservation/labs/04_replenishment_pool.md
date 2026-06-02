@@ -4,6 +4,8 @@
 
 `reservation_units`가 줄어들었을 때 `inventory_ledger`를 기준으로 예약 가능한 row pool을 보충하는 흐름을 확인한다.
 
+![Replenishment Flow](../diagrams/replenishment-flow.svg)
+
 ## 준비
 
 MySQL 데이터를 초기화한다.

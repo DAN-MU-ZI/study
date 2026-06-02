@@ -1,0 +1,14 @@
+stateDiagram-v2
+    [*] --> Reserving: Reserve 요청
+    Reserving --> Reserved: 가용 재고 확보
+    Reserving --> Rejected: 가용 재고 부족
+
+    Reserved --> Claimed: 결제 성공
+    Reserved --> Released: 결제 실패
+    Reserved --> Expired: 예약 TTL 만료
+
+    Expired --> Released: 만료 예약 해제
+
+    Claimed --> [*]
+    Released --> [*]
+    Rejected --> [*]

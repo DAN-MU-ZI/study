@@ -1,0 +1,11 @@
+flowchart TB
+    A["Reserved 상태<br/>same reservation_id"] --> B["Payment success<br/>Claim 시도"]
+    A --> C["TTL expiry<br/>Release 시도"]
+
+    B --> D["MySQL ledger 차감"]
+    C --> E["Redis available 복구"]
+
+    D --> F["최종 상태 판단 필요"]
+    E --> F
+
+    F --> G["중복 차감 또는 중복 복구 위험"]

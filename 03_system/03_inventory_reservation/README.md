@@ -58,11 +58,22 @@ Docker 기반 실습 환경과 챕터별 문서를 함께 구성한다.
 - [실험 계획 수립](./docs/08_experiment_plan.md)
 - [Inventory Reservation ERD](./diagrams/erd.md)
 
-ERD SVG는 `beautiful-mermaid`로 생성한다.
+다이어그램 산출물:
+
+- [예약 상태 전이](./diagrams/reservation-state.svg)
+- [레거시 Redis 예약 흐름](./diagrams/legacy-redis-flow.svg)
+- [레거시 실패 Case 1](./diagrams/legacy-failure-case1-redis-claim-fail.svg)
+- [레거시 실패 Case 2](./diagrams/legacy-failure-case2-redis-cleanup-fail.svg)
+- [레거시 실패 Case 3](./diagrams/legacy-failure-case3-claim-release-race.svg)
+- [MySQL Lock Wait vs SKIP LOCKED](./diagrams/mysql-lock-wait-vs-skip-locked.svg)
+- [보충 시스템 흐름](./diagrams/replenishment-flow.svg)
+- [Inventory Reservation ERD](./diagrams/erd.svg)
+
+다이어그램 SVG는 `beautiful-mermaid`로 생성한다.
 
 ```powershell
 npm install
-npm run render:erd
+npm run render:diagrams
 ```
 
 ## 학습 방식

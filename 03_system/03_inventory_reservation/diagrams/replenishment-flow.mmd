@@ -1,0 +1,13 @@
+flowchart TD
+    A["예약 반복<br/>reservation_units 감소"] --> B{"pool <= low watermark?"}
+    B -->|"아니오"| C["보충 없음"]
+    B -->|"예"| D["replenishment_state row lock"]
+    D --> E["inventory_ledger 기준<br/>가용 수량 확인"]
+    E --> F{"next_unit_id <= total_quantity?"}
+    F -->|"예"| G["reservation_units에<br/>새 unit row 추가"]
+    G --> H["next_unit_id 증가"]
+    H --> I["commit"]
+    F -->|"아니오"| J["보충 중단"]
+
+    K["동시 보충 요청"] --> D
+    D --> L["같은 상품/위치 보충 직렬화"]

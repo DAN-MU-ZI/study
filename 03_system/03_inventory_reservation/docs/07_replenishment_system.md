@@ -10,6 +10,12 @@
 
 따라서 일정 크기의 예약 가능한 row pool을 유지한다. pool이 줄어들면 원장 재고와 예약 상태를 기준으로 새 row를 보충한다.
 
+## 보충 흐름
+
+![Replenishment Flow](../diagrams/replenishment-flow.svg)
+
+Mermaid 원본은 [replenishment-flow.mmd](../diagrams/replenishment-flow.mmd)에 둔다.
+
 ## 확인할 기준
 
 - 현재 `reservation_units`에 남은 row 수
