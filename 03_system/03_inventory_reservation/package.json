@@ -1,0 +1,11 @@
+{
+  "name": "inventory-reservation-study",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "beautiful-mermaid": "1.1.3"
+  },
+  "scripts": {
+    "render:erd": "node diagrams/render-erd.mjs"
+  }
+}

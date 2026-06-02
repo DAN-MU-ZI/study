@@ -1,0 +1,57 @@
+erDiagram
+    INVENTORY_LEDGER {
+        BIGINT shop_id PK
+        BIGINT inventory_item_id PK
+        BIGINT location_id PK
+        INT total_quantity
+        INT claimed_quantity
+        TIMESTAMP updated_at
+    }
+
+    LEGACY_RESERVATION_LOG {
+        VARCHAR reservation_id PK
+        BIGINT shop_id FK
+        BIGINT inventory_item_id FK
+        BIGINT location_id FK
+        INT quantity
+        VARCHAR status
+        DATETIME expires_at
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    RESERVATION_UNITS {
+        BIGINT shop_id PK
+        BIGINT inventory_item_id PK
+        BIGINT location_id PK
+        BIGINT unit_id PK
+        TIMESTAMP created_at
+    }
+
+    RESERVED_QUANTITIES {
+        VARCHAR reservation_id PK
+        BIGINT unit_id PK
+        BIGINT shop_id FK
+        BIGINT inventory_item_id FK
+        BIGINT location_id FK
+        VARCHAR status
+        DATETIME expires_at
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    REPLENISHMENT_STATE {
+        BIGINT shop_id PK
+        BIGINT inventory_item_id PK
+        BIGINT location_id PK
+        BIGINT next_unit_id
+        INT target_pool_size
+        INT low_watermark
+        TIMESTAMP updated_at
+    }
+
+    INVENTORY_LEDGER ||--o{ LEGACY_RESERVATION_LOG : "legacy records"
+    INVENTORY_LEDGER ||--o{ RESERVATION_UNITS : "provides pool"
+    INVENTORY_LEDGER ||--o{ RESERVED_QUANTITIES : "owns reservations"
+    INVENTORY_LEDGER ||--|| REPLENISHMENT_STATE : "controls refill"
+    RESERVATION_UNITS ||--o{ RESERVED_QUANTITIES : "reserved from"

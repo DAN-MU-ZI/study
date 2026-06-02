@@ -1,0 +1,27 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: inventory-reservation-mysql
+    ports:
+      - "13306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: inventory_study
+      MYSQL_USER: study
+      MYSQL_PASSWORD: study
+      TZ: Asia/Seoul
+    command:
+      - --transaction-isolation=READ-COMMITTED
+      - --innodb-lock-wait-timeout=5
+    volumes:
+      - inventory_mysql_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+
+  redis:
+    image: redis:7-alpine
+    container_name: inventory-reservation-redis
+    ports:
+      - "16379:6379"
+
+volumes:
+  inventory_mysql_data:
