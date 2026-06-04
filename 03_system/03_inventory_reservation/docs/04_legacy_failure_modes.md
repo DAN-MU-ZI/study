@@ -8,9 +8,9 @@
 
 각 케이스는 독립적으로 발생할 수 있다. 순차 단계로 해석하지 않도록 케이스별 다이어그램을 분리한다.
 
-오버셀과 언더셀은 최종 상태에서 고객에게 보이는 결과로 판정한다.
+오버셀과 언더셀은 Reserve 이후 결제, Claim, Release 흐름에서 어느 단계가 실패했는지로 구분한다.
 
-![Oversell and Undersell Classification](../diagrams/oversell-undersell-classification.svg)
+![Oversell and Undersell Reserve Claim Branches](../diagrams/oversell-undersell-classification.svg)
 
 Mermaid 원본은 [oversell-undersell-classification.mmd](../diagrams/oversell-undersell-classification.mmd)에 둔다.
 
