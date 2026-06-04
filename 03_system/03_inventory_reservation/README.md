@@ -62,8 +62,8 @@ Docker 기반 실습 환경과 챕터별 문서를 함께 구성한다.
 
 - [예약 상태 전이](./diagrams/reservation-state.svg)
 - [레거시 Redis 예약 흐름](./diagrams/legacy-redis-flow.svg)
-- [레거시 실패 Case 1(언더셀 위험)](./diagrams/legacy-failure-case1-redis-claim-fail.svg)
-- [레거시 실패 Case 2(오버셀 위험)](./diagrams/legacy-failure-case2-redis-cleanup-fail.svg)
+- [레거시 실패 Case 1(오버셀 위험)](./diagrams/legacy-failure-case1-redis-claim-fail.svg)
+- [레거시 실패 Case 2(언더셀 위험)](./diagrams/legacy-failure-case2-redis-cleanup-fail.svg)
 - [레거시 실패 Case 3](./diagrams/legacy-failure-case3-claim-release-race.svg)
 - [MySQL Lock Wait vs SKIP LOCKED](./diagrams/mysql-lock-wait-vs-skip-locked.svg)
 - [보충 시스템 흐름](./diagrams/replenishment-flow.svg)
@@ -106,8 +106,8 @@ Redis 기반 예약 구조는 Redis CLI 명령으로 먼저 확인한다.
 
 레거시 구조의 문제는 정상 흐름보다 실패 흐름에서 더 잘 드러난다. 따라서 중간 단계 실패를 의도적으로 만든다.
 
-- Redis 예약 성공 후 MySQL 원장 차감 실패(예약 잔존 구간은 언더셀 위험, 해제 후에는 오버셀 전이 가능)
-- MySQL 원장 차감 성공 후 Redis 예약 정리 실패(TTL Release 후 오버셀 위험)
+- 결제 성공 후 MySQL 원장 차감 실패(오버셀 위험, 결제 전 예약 잔존 구간은 언더셀처럼 보일 수 있음)
+- MySQL 원장 차감 성공 후 Redis 예약 정리 실패(언더셀 위험, 잘못된 TTL Release 후 오버셀 전이 가능)
 - 예약 만료 처리와 결제 성공 처리의 동시 실행
 - 같은 reservation id에 대한 중복 `Claim`
 - 같은 reservation id에 대한 `Claim`과 `Release` 경합
@@ -204,8 +204,8 @@ MySQL 개선 구조의 핵심 경합은 SQL만으로 재현할 수 있다. MySQL
 
 Redis 구조에서 정합성 문제가 생기는 지점을 구체적으로 정리한다.
 
-- Redis 예약 성공 후 MySQL 원장 차감 실패(예약 잔존 구간은 언더셀 위험, 해제 후에는 오버셀 전이 가능)
-- MySQL 원장 차감 성공 후 Redis 예약 정리 실패(TTL Release 후 오버셀 위험)
+- 결제 성공 후 MySQL 원장 차감 실패(오버셀 위험, 결제 전 예약 잔존 구간은 언더셀처럼 보일 수 있음)
+- MySQL 원장 차감 성공 후 Redis 예약 정리 실패(언더셀 위험, 잘못된 TTL Release 후 오버셀 전이 가능)
 - 예약 만료 처리와 결제 성공 처리의 경합
 - 중복 요청 또는 재시도 요청으로 인한 상태 불일치
 - 장애 복구 시 Redis 상태와 MySQL 상태를 맞추기 어려운 상황

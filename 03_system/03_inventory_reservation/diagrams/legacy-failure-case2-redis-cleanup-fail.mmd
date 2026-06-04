@@ -9,6 +9,7 @@ sequenceDiagram
     API->>DB: Claim 성공
     DB-->>API: ledger 차감 완료
     API-xRedis: reservation 정리 실패
+    Note over Redis,DB: 차감된 재고가 Redis 예약 상태로 계속 남음
+    Note over API: 결과: 언더셀 위험(예약 정리 실패)
     Worker->>Redis: TTL 만료 후 Release 처리
-    Note over Redis,DB: 판매된 재고가 Redis 가용 수량으로 다시 복구될 수 있음
-    Note over API: 결과: 오버셀 위험(TTL Release 후)
+    Note over Redis,DB: 잘못 Release되면 오버셀 위험으로 전이

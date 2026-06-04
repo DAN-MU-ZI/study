@@ -5,6 +5,7 @@ sequenceDiagram
 
     API->>Redis: Reserve 성공
     Redis-->>API: available 감소, reservation TTL 저장
+    API->>API: 결제 또는 주문 성공
     API-xDB: Claim 실패
-    Note over Redis,DB: Redis 예약이 남아 판매 가능 재고만 줄어든 상태
-    Note over API: 결과: 언더셀 위험(예약 잔존 구간)
+    Note over Redis,DB: 팔린 재고가 원장에 차감되지 않은 상태
+    Note over API: 결과: 오버셀 위험(원장 차감 실패)
