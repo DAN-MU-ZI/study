@@ -77,7 +77,7 @@ ROLLBACK;
 
 이 파트에서는 같은 경쟁 상황에서 `FOR UPDATE SKIP LOCKED`가 잠긴 row를 건너뛰고 다른 예약 가능 row를 확보하는지 확인한다. 목적은 동시 예약 요청이 같은 row 때문에 대기하지 않고 서로 다른 `unit_id`를 가져갈 수 있는지 보는 것이다.
 
-![Part 1: FOR UPDATE 대기 확인](../diagrams/mysql-skip-locked-wait-part2.png)
+![Part 2: SKIP LOCKED 확인](../diagrams/mysql-skip-locked-wait-part2.png)
 
 다시 `Session A`에서 첫 번째 row를 잠근다.
 
@@ -125,11 +125,23 @@ FOR UPDATE SKIP LOCKED;
 ROLLBACK;
 ```
 
-## Part 3: 예약 처리 흐름으로 확장
+## Part 3: FOR UPDATE와 SKIP LOCKED 차이 정리
+
+이 파트에서는 앞에서 확인한 두 조회 방식의 차이를 정리한다. 목적은 같은 예약 가능 row를 여러 세션이 동시에 노릴 때 대기 방식과 확보 결과가 어떻게 달라지는지 구분하는 것이다.
+
+![Part 3: FOR UPDATE와 SKIP LOCKED 차이 정리](../diagrams/mysql-for-update-vs-skip-locked.png)
+
+차이:
+
+- `FOR UPDATE`는 앞선 세션이 잠근 row를 뒤 세션이 기다린다.
+- `FOR UPDATE`에서는 뒤 세션이 다음 row로 진행하지 못해 락 대기 시간이 예약 처리 지연으로 이어질 수 있다.
+- `FOR UPDATE SKIP LOCKED`는 이미 잠긴 row를 건너뛰고 다음 예약 가능 row를 찾는다.
+- `FOR UPDATE SKIP LOCKED`에서는 두 세션이 서로 다른 `unit_id`를 확보할 수 있다.
+- 예약 가능 row가 부족하면 `SKIP LOCKED` 조회 결과가 비어 있을 수 있으므로, 애플리케이션에서는 재시도나 품절 처리를 분기해야 한다.
+
+## Part 4: 예약 처리 흐름으로 확장
 
 이 파트에서는 Part 2에서 확인한 row 확보 방식을 실제 예약 처리 절차에 적용한다. 목적은 확보한 row를 예약 완료 데이터로 옮겼을 때 예약 가능 수량과 예약 완료 수량이 어떻게 바뀌는지, 그리고 동시 실행에서 같은 `unit_id`가 중복 예약되지 않는지 확인하는 것이다.
-
-![Part 1: FOR UPDATE 대기 확인](../diagrams/mysql-for-update-vs-skip-locked.png)
 
 확보한 row를 실제 예약 상태로 옮기는 흐름을 확인한다.
 
