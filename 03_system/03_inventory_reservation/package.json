@@ -8,10 +8,11 @@
   "scripts": {
     "render:erd": "node diagrams/render-erd.mjs",
     "render:state": "node diagrams/render-reservation-state.mjs",
+    "render:classification": "node diagrams/render-diagram.mjs oversell-undersell-classification.mmd",
     "render:legacy-flow": "node diagrams/render-diagram.mjs legacy-redis-flow.mmd",
     "render:legacy-failures": "node diagrams/render-diagram.mjs legacy-failure-case1-redis-claim-fail.mmd && node diagrams/render-diagram.mjs legacy-failure-case2-redis-cleanup-fail.mmd && node diagrams/render-diagram.mjs legacy-failure-case3-claim-release-race.mmd",
     "render:mysql-locking": "node diagrams/render-diagram.mjs mysql-lock-wait-vs-skip-locked.mmd",
     "render:replenishment": "node diagrams/render-diagram.mjs replenishment-flow.mmd",
-    "render:diagrams": "npm run render:erd && npm run render:state && npm run render:legacy-flow && npm run render:legacy-failures && npm run render:mysql-locking && npm run render:replenishment"
+    "render:diagrams": "npm run render:erd && npm run render:state && npm run render:classification && npm run render:legacy-flow && npm run render:legacy-failures && npm run render:mysql-locking && npm run render:replenishment"
   }
 }

@@ -61,6 +61,7 @@ Docker 기반 실습 환경과 챕터별 문서를 함께 구성한다.
 다이어그램 산출물:
 
 - [예약 상태 전이](./diagrams/reservation-state.svg)
+- [오버셀·언더셀 판정 기준](./diagrams/oversell-undersell-classification.svg)
 - [레거시 Redis 예약 흐름](./diagrams/legacy-redis-flow.svg)
 - [레거시 실패 Case 1(오버셀 위험)](./diagrams/legacy-failure-case1-redis-claim-fail.svg)
 - [레거시 실패 Case 2(언더셀 위험)](./diagrams/legacy-failure-case2-redis-cleanup-fail.svg)

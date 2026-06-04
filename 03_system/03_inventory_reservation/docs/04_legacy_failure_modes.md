@@ -8,6 +8,12 @@
 
 각 케이스는 독립적으로 발생할 수 있다. 순차 단계로 해석하지 않도록 케이스별 다이어그램을 분리한다.
 
+오버셀과 언더셀은 최종 상태에서 고객에게 보이는 결과로 판정한다.
+
+![Oversell and Undersell Classification](../diagrams/oversell-undersell-classification.svg)
+
+Mermaid 원본은 [oversell-undersell-classification.mmd](../diagrams/oversell-undersell-classification.mmd)에 둔다.
+
 ## Case 1(오버셀 위험): 결제 성공 후 MySQL 원장 차감 실패
 
 ![Redis Reserve Success and MySQL Claim Failure](../diagrams/legacy-failure-case1-redis-claim-fail.svg)

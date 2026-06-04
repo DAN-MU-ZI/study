@@ -1,0 +1,30 @@
+flowchart TB
+    Start([판정 기준<br/>고객에게 보이는 최종 결과])
+
+    Oversell[오버셀]
+    Undersell[언더셀]
+
+    OversellCondition[조건<br/>결제 또는 주문 성공]
+    OversellMismatch[불일치<br/>원장 차감 누락<br/>또는 잘못된 Release]
+    OversellResult[결과<br/>이미 팔린 재고가<br/>다시 판매 가능]
+
+    UndersellCondition[조건<br/>판매 가능한 재고 존재]
+    UndersellMismatch[불일치<br/>Redis 예약 또는 차감 상태가<br/>과하게 남음]
+    UndersellResult[결과<br/>품절처럼 보여<br/>판매 기회 손실]
+
+    Start --> Oversell
+    Start --> Undersell
+
+    Oversell --> OversellCondition --> OversellMismatch --> OversellResult
+    Undersell --> UndersellCondition --> UndersellMismatch --> UndersellResult
+
+    OversellMismatch -. Case 1 .-> OversellCase1[결제 성공 후<br/>MySQL 차감 실패]
+    OversellMismatch -. Case 2 변형 .-> OversellCase2[Claim 후<br/>잘못된 Release]
+    UndersellMismatch -. Case 2 .-> UndersellCase2[MySQL 차감 후<br/>Redis 예약 잔존]
+
+    classDef oversell fill:#fff1f2,stroke:#e11d48,color:#881337;
+    classDef undersell fill:#eff6ff,stroke:#2563eb,color:#1e3a8a;
+    classDef normal fill:#f0fdf4,stroke:#16a34a,color:#14532d;
+
+    class Oversell,OversellCondition,OversellMismatch,OversellResult,OversellCase1,OversellCase2 oversell;
+    class Undersell,UndersellCondition,UndersellMismatch,UndersellResult,UndersellCase2 undersell;

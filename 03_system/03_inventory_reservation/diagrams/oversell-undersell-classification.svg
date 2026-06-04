@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 830.403 698.8" width="830.403" height="698.8" style="--bg:#ffffff;--fg:#1f2328;--line:#d1d9e0;--accent:#0969da;--muted:#59636e;background:var(--bg)">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap');
+  text { font-family: 'Inter', system-ui, sans-serif; }
+  svg {
+    /* Derived from --bg and --fg (overridable via --line, --accent, etc.) */
+    --_text:          var(--fg);
+    --_text-sec:      var(--muted, color-mix(in srgb, var(--fg) 60%, var(--bg)));
+    --_text-muted:    var(--muted, color-mix(in srgb, var(--fg) 40%, var(--bg)));
+    --_text-faint:    color-mix(in srgb, var(--fg) 25%, var(--bg));
+    --_line:          var(--line, color-mix(in srgb, var(--fg) 50%, var(--bg)));
+    --_arrow:         var(--accent, color-mix(in srgb, var(--fg) 85%, var(--bg)));
+    --_node-fill:     var(--surface, color-mix(in srgb, var(--fg) 3%, var(--bg)));
+    --_node-stroke:   var(--border, color-mix(in srgb, var(--fg) 20%, var(--bg)));
+    --_group-fill:    var(--bg);
+    --_group-hdr:     color-mix(in srgb, var(--fg) 5%, var(--bg));
+    --_inner-stroke:  color-mix(in srgb, var(--fg) 12%, var(--bg));
+    --_key-badge:     color-mix(in srgb, var(--fg) 10%, var(--bg));
+  }
+</style>
+<defs>
+  <marker id="arrowhead" markerWidth="8" markerHeight="5" refX="7" refY="2.5" orient="auto">
+    <polygon points="0 0, 8 2.5, 0 5" fill="var(--_arrow)" stroke="var(--_arrow)" stroke-width="0.75" stroke-linejoin="round" />
+  </marker>
+  <marker id="arrowhead-start" markerWidth="8" markerHeight="5" refX="1" refY="2.5" orient="auto-start-reverse">
+    <polygon points="8 0, 0 2.5, 8 5" fill="var(--_arrow)" stroke="var(--_arrow)" stroke-width="0.75" stroke-linejoin="round" />
+  </marker>
+</defs>
+<polyline class="edge" data-from="Start" data-to="Oversell" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="466.8866666666666,101.80000000000001 466.8866666666666,117.57500000000002 257.63599999999997,117.57500000000002 257.63599999999997,133.35000000000002" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="Start" data-to="Undersell" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="466.8866666666666,101.80000000000001 466.8866666666666,117.57500000000002 647.9430000000001,117.57500000000002 647.9430000000001,133.35000000000002" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="Oversell" data-to="OversellCondition" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="257.63599999999997,170.25000000000003 257.63599999999997,226.25000000000003" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="OversellCondition" data-to="OversellMismatch" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="257.63599999999997,280.05 257.63599999999997,336.05" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="OversellMismatch" data-to="OversellResult" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="215.28549999999996,406.75 215.28549999999996,443.2 123.068,443.2 123.068,462.75" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="Undersell" data-to="UndersellCondition" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="647.943,170.25000000000003 647.943,226.25000000000003" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="UndersellCondition" data-to="UndersellMismatch" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="647.943,280.05 647.943,336.05" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="UndersellMismatch" data-to="UndersellResult" data-style="solid" data-arrow-start="false" data-arrow-end="true" points="611.5583333333332,406.75 611.5583333333332,458.3 583.364,458.3 583.364,462.75" fill="none" stroke="var(--_line)" stroke-width="1" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="OversellMismatch" data-to="OversellCase1" data-style="dotted" data-arrow-start="false" data-arrow-end="true" data-label="Case 1" points="257.63599999999997,406.75 257.63599999999997,589.45" fill="none" stroke="var(--_line)" stroke-width="1" stroke-dasharray="4 4" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="OversellMismatch" data-to="OversellCase2" data-style="dotted" data-arrow-start="false" data-arrow-end="true" data-label="Case 2 변형" points="299.9865,406.75 299.9865,508.7 441.844,508.7 441.844,589.45" fill="none" stroke="var(--_line)" stroke-width="1" stroke-dasharray="4 4" marker-end="url(#arrowhead)" />
+<polyline class="edge" data-from="UndersellMismatch" data-to="UndersellCase2" data-style="dotted" data-arrow-start="false" data-arrow-end="true" data-label="Case 2" points="684.3276666666666,406.75 684.3276666666666,508.7 712.5219999999999,508.7 712.5219999999999,589.45" fill="none" stroke="var(--_line)" stroke-width="1" stroke-dasharray="4 4" marker-end="url(#arrowhead)" />
+<g class="edge-label" data-from="OversellMismatch" data-to="OversellCase1" data-label="Case 1">
+  <rect x="234.13599999999997" y="500.6" width="46.756" height="30.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="1" />
+  <text x="257.51399999999995" y="515.75" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-sec)" dy="3.8499999999999996">Case 1</text>
+</g>
+<g class="edge-label" data-from="OversellMismatch" data-to="OversellCase2" data-label="Case 2 변형">
+  <rect x="403.844" y="515.7" width="75.86200000000001" height="30.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="1" />
+  <text x="441.775" y="530.85" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-sec)" dy="3.8499999999999996">Case 2 변형</text>
+</g>
+<g class="edge-label" data-from="UndersellMismatch" data-to="UndersellCase2" data-label="Case 2">
+  <rect x="687.0219999999999" y="515.7" width="50.32" height="30.3" rx="2" ry="2" fill="var(--bg)" stroke="var(--_inner-stroke)" stroke-width="1" />
+  <text x="712.1819999999999" y="530.85" text-anchor="middle" font-size="11" font-weight="400" fill="var(--_text-sec)" dy="3.8499999999999996">Case 2</text>
+</g>
+<g class="node" data-id="Start" data-label="판정 기준
+고객에게 보이는 최종 결과" data-shape="stadium">
+  <rect x="361.0671666666666" y="48" width="211.639" height="53.800000000000004" rx="26.900000000000002" ry="26.900000000000002" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="466.8866666666666" y="74.9" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)"><tspan x="466.8866666666666" dy="-3.9000000000000012">판정 기준</tspan><tspan x="466.8866666666666" dy="16.900000000000002">고객에게 보이는 최종 결과</tspan></text>
+</g>
+<g class="node" data-id="Oversell" data-label="오버셀" data-shape="rectangle">
+  <rect x="214.43099999999995" y="133.35000000000002" width="86.41" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="257.63599999999997" y="151.8" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">오버셀</text>
+</g>
+<g class="node" data-id="Undersell" data-label="언더셀" data-shape="rectangle">
+  <rect x="604.738" y="133.35000000000002" width="86.41" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="647.9430000000001" y="151.8" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">언더셀</text>
+</g>
+<g class="node" data-id="OversellCondition" data-label="조건
+결제 또는 주문 성공" data-shape="rectangle">
+  <rect x="174.04649999999995" y="226.25000000000003" width="167.179" height="53.800000000000004" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="257.63599999999997" y="253.15000000000003" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)"><tspan x="257.63599999999997" dy="-3.9000000000000012">조건</tspan><tspan x="257.63599999999997" dy="16.900000000000002">결제 또는 주문 성공</tspan></text>
+</g>
+<g class="node" data-id="OversellMismatch" data-label="불일치
+원장 차감 누락
+또는 잘못된 Release" data-shape="rectangle">
+  <rect x="172.93499999999997" y="336.05" width="169.402" height="70.7" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="257.63599999999997" y="371.40000000000003" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)"><tspan x="257.63599999999997" dy="-12.350000000000001">불일치</tspan><tspan x="257.63599999999997" dy="16.900000000000002">원장 차감 누락</tspan><tspan x="257.63599999999997" dy="16.900000000000002">또는 잘못된 Release</tspan></text>
+</g>
+<g class="node" data-id="OversellResult" data-label="결과
+이미 팔린 재고가
+다시 판매 가능" data-shape="rectangle">
+  <rect x="48" y="462.75" width="150.136" height="70.7" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="123.068" y="498.1" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)"><tspan x="123.068" dy="-12.350000000000001">결과</tspan><tspan x="123.068" dy="16.900000000000002">이미 팔린 재고가</tspan><tspan x="123.068" dy="16.900000000000002">다시 판매 가능</tspan></text>
+</g>
+<g class="node" data-id="UndersellCondition" data-label="조건
+판매 가능한 재고 존재" data-shape="rectangle">
+  <rect x="556.9434999999999" y="226.25000000000003" width="181.999" height="53.800000000000004" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="647.9429999999999" y="253.15000000000003" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)"><tspan x="647.9429999999999" dy="-3.9000000000000012">조건</tspan><tspan x="647.9429999999999" dy="16.900000000000002">판매 가능한 재고 존재</tspan></text>
+</g>
+<g class="node" data-id="UndersellMismatch" data-label="불일치
+Redis 예약 또는 차감 상태가
+과하게 남음" data-shape="rectangle">
+  <rect x="538.789" y="336.05" width="218.308" height="70.7" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="647.943" y="371.40000000000003" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)"><tspan x="647.943" dy="-12.350000000000001">불일치</tspan><tspan x="647.943" dy="16.900000000000002">Redis 예약 또는 차감 상태가</tspan><tspan x="647.943" dy="16.900000000000002">과하게 남음</tspan></text>
+</g>
+<g class="node" data-id="UndersellResult" data-label="결과
+품절처럼 보여
+판매 기회 손실" data-shape="rectangle">
+  <rect x="515.7059999999999" y="462.75" width="135.316" height="70.7" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="583.3639999999999" y="498.1" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)"><tspan x="583.3639999999999" dy="-12.350000000000001">결과</tspan><tspan x="583.3639999999999" dy="16.900000000000002">품절처럼 보여</tspan><tspan x="583.3639999999999" dy="16.900000000000002">판매 기회 손실</tspan></text>
+</g>
+<g class="node" data-id="OversellCase1" data-label="결제 성공 후
+MySQL 차감 실패" data-shape="rectangle">
+  <rect x="182.1975" y="589.45" width="150.877" height="53.800000000000004" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="257.63599999999997" y="616.35" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)"><tspan x="257.63599999999997" dy="-3.9000000000000012">결제 성공 후</tspan><tspan x="257.63599999999997" dy="16.900000000000002">MySQL 차감 실패</tspan></text>
+</g>
+<g class="node" data-id="OversellCase2" data-label="Claim 후
+잘못된 Release" data-shape="rectangle">
+  <rect x="373.0745" y="589.45" width="137.539" height="53.800000000000004" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="441.844" y="616.35" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)"><tspan x="441.844" dy="-3.9000000000000012">Claim 후</tspan><tspan x="441.844" dy="16.900000000000002">잘못된 Release</tspan></text>
+</g>
+<g class="node" data-id="UndersellCase2" data-label="MySQL 차감 후
+Redis 예약 잔존" data-shape="rectangle">
+  <rect x="642.6410000000001" y="589.45" width="139.762" height="53.800000000000004" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="712.522" y="616.35" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)"><tspan x="712.522" dy="-3.9000000000000012">MySQL 차감 후</tspan><tspan x="712.522" dy="16.900000000000002">Redis 예약 잔존</tspan></text>
+</g>
+<g class="node" data-id="class" data-label="class" data-shape="rectangle">
+  <rect x="612.7061666666666" y="48.00000000000002" width="74.554" height="36.900000000000006" rx="0" ry="0" fill="var(--_node-fill)" stroke="var(--_node-stroke)" stroke-width="0.75" />
+  <text x="649.9831666666666" y="66.45000000000002" text-anchor="middle" font-size="13" font-weight="500" fill="var(--_text)" dy="4.55">class</text>
+</g>
+</svg>
