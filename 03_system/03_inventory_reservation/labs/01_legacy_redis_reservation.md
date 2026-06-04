@@ -26,6 +26,8 @@ Get-Content .\labs\sql\00_reset_mysql.sql | docker compose exec -T mysql mysql -
 
 ## Step 1: Redis에 가용 수량 저장
 
+이 단계에서는 Redis를 재고별 가용 수량 counter로 사용하는 방식을 확인한다. 목적은 예약 판단이 MySQL 원장 변경 전에 Redis 값만 보고 시작되는 구조를 보는 것이다.
+
 Redis CLI에 접속한다.
 
 ```powershell
@@ -46,6 +48,8 @@ GET available:1:100:1
 
 ## Step 2: Reserve 수행
 
+이 단계에서는 임시 예약이 Redis 가용 수량 차감과 TTL 예약 키 생성으로 표현되는지 확인한다. 목적은 예약 요청이 성공한 직후에도 MySQL 원장은 아직 확정 차감되지 않는 구간을 보는 것이다.
+
 예약 1개를 만든다고 가정하고 Redis 가용 수량을 1 차감한다.
 
 ```text
@@ -63,6 +67,8 @@ TTL reservation:r-001
 - MySQL 원장의 `claimed_quantity`는 아직 0이다.
 
 ## Step 3: Claim 수행
+
+이 단계에서는 결제 성공 이후 MySQL 원장에 확정 차감을 반영하는 흐름을 확인한다. 목적은 Redis 임시 예약과 MySQL 원장 반영이 서로 다른 시점에 실행된다는 점을 보는 것이다.
 
 결제 성공 후 MySQL 원장을 차감한다고 가정한다.
 
@@ -105,6 +111,8 @@ DEL reservation:r-001
 ```
 
 ## Step 4: 상태 기록
+
+이 단계에서는 Redis와 MySQL의 최종 상태를 나란히 확인한다. 목적은 Redis 예약 정보, Redis 가용 수량, MySQL 원장 수량이 같은 의미로 맞춰져 있는지 판단하는 것이다.
 
 MySQL 상태를 확인한다.
 

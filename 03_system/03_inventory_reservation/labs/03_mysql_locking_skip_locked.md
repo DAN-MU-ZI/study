@@ -24,6 +24,10 @@ docker compose exec mysql mysql -ustudy -pstudy inventory_study
 
 ## Part 1: FOR UPDATE 대기 확인
 
+이 파트에서는 하나의 예약 가능 row를 두 세션이 동시에 선택하려 할 때, 일반 `FOR UPDATE`가 어떤 대기 상태를 만드는지 확인한다. 목적은 앞선 트랜잭션이 row를 잠근 동안 뒤 트랜잭션의 예약 처리가 지연되는 상황을 직접 보는 것이다.
+
+![Part 1: FOR UPDATE 대기 확인](../diagrams/mysql-for-update-wait-part1.png)
+
 `Session A`에서 트랜잭션을 시작하고 첫 번째 예약 가능 row를 잠근다.
 
 ```sql
@@ -70,6 +74,10 @@ ROLLBACK;
 ```
 
 ## Part 2: SKIP LOCKED 확인
+
+이 파트에서는 같은 경쟁 상황에서 `FOR UPDATE SKIP LOCKED`가 잠긴 row를 건너뛰고 다른 예약 가능 row를 확보하는지 확인한다. 목적은 동시 예약 요청이 같은 row 때문에 대기하지 않고 서로 다른 `unit_id`를 가져갈 수 있는지 보는 것이다.
+
+![Part 1: FOR UPDATE 대기 확인](../diagrams/mysql-skip-locked-wait-part2.png)
 
 다시 `Session A`에서 첫 번째 row를 잠근다.
 
@@ -118,6 +126,10 @@ ROLLBACK;
 ```
 
 ## Part 3: 예약 처리 흐름으로 확장
+
+이 파트에서는 Part 2에서 확인한 row 확보 방식을 실제 예약 처리 절차에 적용한다. 목적은 확보한 row를 예약 완료 데이터로 옮겼을 때 예약 가능 수량과 예약 완료 수량이 어떻게 바뀌는지, 그리고 동시 실행에서 같은 `unit_id`가 중복 예약되지 않는지 확인하는 것이다.
+
+![Part 1: FOR UPDATE 대기 확인](../diagrams/mysql-for-update-vs-skip-locked.png)
 
 확보한 row를 실제 예약 상태로 옮기는 흐름을 확인한다.
 

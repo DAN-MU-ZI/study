@@ -22,6 +22,8 @@ Get-Content .\labs\sql\01_show_state.sql | docker compose exec -T mysql mysql -u
 
 ## Step 1: Pool 줄이기
 
+이 단계에서는 예약 가능 row pool이 실제 예약 처리로 줄어든 상황을 만든다. 목적은 보충 시스템이 필요한 기준인 현재 pool 크기와 목표 pool 크기의 차이를 확인하는 것이다.
+
 예약이 여러 번 발생했다고 가정하고 `reservation_units` 일부를 제거한다.
 
 ```powershell
@@ -40,6 +42,8 @@ Get-Content .\labs\sql\01_show_state.sql | docker compose exec -T mysql mysql -u
 - `replenishment_state`의 `target_pool_size`와 현재 pool 크기를 비교한다.
 
 ## Step 2: 보충 1회 실행
+
+이 단계에서는 줄어든 pool을 보충 SQL로 다시 채우는 흐름을 확인한다. 목적은 새 `unit_id`가 원장 재고 범위 안에서 생성되고, 다음 생성 위치가 `replenishment_state`에 기록되는지 보는 것이다.
 
 보충 SQL을 1회 실행한다.
 
@@ -60,6 +64,8 @@ Get-Content .\labs\sql\01_show_state.sql | docker compose exec -T mysql mysql -u
 - 보충은 원장 재고 범위 안에서만 수행되어야 한다.
 
 ## Step 3: 동시 보충 경합 확인
+
+이 단계에서는 같은 상품과 위치에 대해 보충 작업이 동시에 실행될 때 어떤 row가 잠기는지 확인한다. 목적은 `replenishment_state` 잠금으로 보충 작업을 직렬화해 중복 `unit_id` 생성을 막을 수 있는지 보는 것이다.
 
 두 개의 MySQL 세션을 연다.
 

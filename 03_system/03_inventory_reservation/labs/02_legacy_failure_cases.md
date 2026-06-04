@@ -28,6 +28,8 @@ docker compose exec redis redis-cli SET available:1:100:1 100
 
 ## Case 1(오버셀 위험): 결제 성공 후 MySQL 원장 차감 실패
 
+이 케이스에서는 Redis 예약 이후 결제 또는 주문은 성공했지만 MySQL 원장 차감이 실패한 상황을 확인한다. 목적은 이미 팔린 재고가 원장에 반영되지 않았을 때 다시 판매 가능해질 수 있는 위험을 보는 것이다.
+
 Redis에서 예약을 먼저 성공시킨다.
 
 ```powershell
@@ -55,6 +57,8 @@ Get-Content .\labs\sql\01_show_state.sql | docker compose exec -T mysql mysql -u
 - 결제 전 Redis 예약만 남아 있는 순간 상태는 일시적으로 언더셀처럼 보일 수 있다. 이 케이스의 핵심은 결제 성공 후 원장 차감 실패다.
 
 ## Case 2(언더셀 위험): MySQL 원장 차감 성공 후 Redis 예약 정리 실패
+
+이 케이스에서는 MySQL 원장 차감은 성공했지만 Redis 예약 키 정리가 실패한 상황을 확인한다. 목적은 실제로는 처리된 재고가 Redis에 계속 묶여 판매 가능 수량이 과소 계산되는 위험을 보는 것이다.
 
 초기화한다.
 
@@ -101,6 +105,8 @@ Get-Content .\labs\sql\01_show_state.sql | docker compose exec -T mysql mysql -u
 - 이 경우에는 실제 판매된 재고가 다시 예약 가능해지므로 오버셀 위험으로 전이된다.
 
 ## Case 3: Claim과 Release 경합
+
+이 케이스에서는 같은 예약에 대해 결제 성공 처리와 만료 해제 처리가 동시에 실행될 때의 최종 상태를 확인한다. 목적은 처리 순서에 따라 Redis와 MySQL 상태가 어긋나고, 그 결과가 오버셀 또는 언더셀로 이어지는지 보는 것이다.
 
 동일한 예약에 대해 결제 성공 처리와 만료 처리가 동시에 실행된다고 가정한다.
 
