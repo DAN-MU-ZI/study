@@ -3,16 +3,25 @@ flowchart TD
     RedisHold[Redis<br/>available 감소<br/>reservation TTL 저장]
     Payment{결제 성공?}
 
+    Release{Release 성공?}
+    NormalRelease[정상 해제<br/>available 복구]
+    UnderRelease[언더셀 위험<br/>팔리지 않은 재고가<br/>예약 상태로 묶임]
+    Claim{Claim 성공?}
     OverClaim[Case 1<br/>오버셀 위험<br/>결제 성공<br/>원장 차감 누락]
+    Cleanup{Redis 정리 성공?}
     NormalClaim[정상 처리<br/>원장 차감<br/>예약 정리 완료]
     UnderCleanup[Case 2<br/>언더셀 위험<br/>원장 차감<br/>Redis 예약 잔존]
     OverRelease[Case 2 변형<br/>오버셀 전이<br/>잘못된 Release로<br/>available 복구]
-    NormalRelease[정상 해제<br/>available 복구]
 
     Start --> RedisHold --> Payment
 
-    Payment -- 아니오 또는 만료<br/>Release 성공 --> NormalRelease
-    Payment -- 예<br/>Claim 실패 --> OverClaim
-    Payment -- 예<br/>Claim 성공<br/>Redis 정리 성공 --> NormalClaim
-    Payment -- 예<br/>Claim 성공<br/>Redis 정리 실패 --> UnderCleanup
+    Payment -- 아니오 또는 만료 --> Release
+    Release -- 예 --> NormalRelease
+    Release -- 아니오 --> UnderRelease
+
+    Payment -- 예 --> Claim
+    Claim -- 아니오 --> OverClaim
+    Claim -- 예 --> Cleanup
+    Cleanup -- 예 --> NormalClaim
+    Cleanup -- 아니오 --> UnderCleanup
     UnderCleanup -. 만료 작업이 잘못 Release .-> OverRelease
