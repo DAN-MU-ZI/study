@@ -13,8 +13,13 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Reservation {
 
 	@Id
@@ -34,9 +39,6 @@ public class Reservation {
 		joinColumns = @JoinColumn(name = "reservation_id")
 	)
 	private List<ReservationLine> lines;
-
-	protected Reservation() {
-	}
 
 	private Reservation(Long checkoutId, List<ReservationLine> lines) {
 		this.checkoutId = checkoutId;
@@ -83,13 +85,5 @@ public class Reservation {
 
 	public boolean isReleased() {
 		return this.status == ReservationStatus.RELEASED;
-	}
-
-	public Long getId() {
-		return id;
-	}
-
-	public List<ReservationLine> getLines() {
-		return lines;
 	}
 }

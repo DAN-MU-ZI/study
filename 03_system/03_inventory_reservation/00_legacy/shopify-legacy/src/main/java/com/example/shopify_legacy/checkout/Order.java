@@ -11,12 +11,12 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "orders")
+@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Order {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Getter
     private Long id;
 
     private Long checkoutId;

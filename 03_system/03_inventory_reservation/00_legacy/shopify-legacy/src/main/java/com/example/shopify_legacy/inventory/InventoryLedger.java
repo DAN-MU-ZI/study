@@ -6,8 +6,13 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class InventoryLedger {
 
 	@Id
@@ -20,9 +25,6 @@ public class InventoryLedger {
 	private String type;
 	private Instant createdAt;
 
-	protected InventoryLedger() {
-	}
-
 	private InventoryLedger(Long inventoryItemId, long quantity, String paymentId, String type) {
 		this.inventoryItemId = inventoryItemId;
 		this.quantity = quantity;
@@ -33,9 +35,5 @@ public class InventoryLedger {
 
 	public static InventoryLedger claim(Long inventoryItemId, long quantity, String paymentId) {
 		return new InventoryLedger(inventoryItemId, quantity, paymentId, "CLAIM");
-	}
-
-	public Long getId() {
-		return id;
 	}
 }
