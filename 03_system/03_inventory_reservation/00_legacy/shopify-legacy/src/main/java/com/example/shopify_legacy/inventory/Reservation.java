@@ -1,6 +1,7 @@
 package com.example.shopify_legacy.inventory;
 
 import java.util.List;
+import java.util.UUID;
 
 import com.example.shopify_legacy.checkout.CheckoutLine;
 
@@ -25,7 +26,9 @@ public class Reservation {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
-	
+
+	private String reservationToken;
+
 	private Long checkoutId;
 
 	@Enumerated(EnumType.STRING)
@@ -40,18 +43,23 @@ public class Reservation {
 	)
 	private List<ReservationLine> lines;
 
-	private Reservation(Long checkoutId, List<ReservationLine> lines) {
+	private Reservation(String reservationToken, Long checkoutId, List<ReservationLine> lines) {
+		this.reservationToken = reservationToken;
 		this.checkoutId = checkoutId;
 		this.lines = lines;
 		this.status = ReservationStatus.RESERVED;
 	}
 
 	public static Reservation reserved(Long checkoutId, List<CheckoutLine> lines) {
+		return reserved(UUID.randomUUID().toString(), checkoutId, lines);
+	}
+
+	public static Reservation reserved(String reservationToken, Long checkoutId, List<CheckoutLine> lines) {
 		List<ReservationLine> reservationLines = lines.stream()
 			.map(line -> new ReservationLine(line.inventoryItemId(), line.quantity()))
 			.toList();
 
-		return new Reservation(checkoutId, reservationLines);
+		return new Reservation(reservationToken, checkoutId, reservationLines);
 	}
 
 	public void claim() {

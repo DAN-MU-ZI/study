@@ -2,6 +2,7 @@ package com.example.shopify_legacy.inventory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ public class InventoryReservationService {
     private final InventoryLedgerRepository inventoryLedgerRepository;
 
     public Reservation reserve(Long checkoutId, List<CheckoutLine> lines) {
+        String reservationToken = UUID.randomUUID().toString();
         List<CheckoutLine> reservedLines = new ArrayList<>();
 
         try {
@@ -38,7 +40,16 @@ public class InventoryReservationService {
                 reservedLines.add(line);
             }
 
-            Reservation reservation = Reservation.reserved(checkoutId, lines);
+            redisTemplate.opsForValue().set(
+                    toReservationKey(reservationToken),
+                    "RESERVED"
+            );
+
+            Reservation reservation = Reservation.reserved(
+                    reservationToken,
+                    checkoutId,
+                    lines
+            );
             return reservationRepository.save(reservation);
         } catch (RuntimeException e) {
             for (CheckoutLine line : reservedLines) {
@@ -49,6 +60,7 @@ public class InventoryReservationService {
                         );
             }
 
+            redisTemplate.delete(toReservationKey(reservationToken));
             throw e;
         }
     }
@@ -75,8 +87,19 @@ public class InventoryReservationService {
             inventoryLedgerRepository.save(ledger);
         }
 
+        cleanupRedisReservation(reservation);
+
         reservation.claim();
         reservationRepository.save(reservation);
+    }
+
+    public void claimCleanupFirstForFailureDemo(Long reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow();
+
+        cleanupRedisReservation(reservation);
+
+        throw new IllegalStateException("LEDGER_DEDUCTION_FAILED");
     }
 
     public void release(Long reservationId, String reason) {
@@ -101,5 +124,13 @@ public class InventoryReservationService {
 
     private String toStockKey(Long inventoryItemId) {
         return "stock:" + inventoryItemId;
+    }
+
+    private String toReservationKey(String reservationToken) {
+        return "reservation:" + reservationToken;
+    }
+
+    private void cleanupRedisReservation(Reservation reservation) {
+        redisTemplate.delete(toReservationKey(reservation.getReservationToken()));
     }
 }
