@@ -77,8 +77,6 @@ public class InventoryReservationService {
 
         reservation.claim();
         reservationRepository.save(reservation);
-
-        redisTemplate.delete("reservation:" + reservationId);
     }
 
     public void release(Long reservationId, String reason) {

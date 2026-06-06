@@ -1,7 +1,7 @@
 package com.example.shopify_legacy.payment;
 
 public record PaymentResult(
-    boolean successed,
+    boolean succeeded,
     String paymentId
 ) {
 }

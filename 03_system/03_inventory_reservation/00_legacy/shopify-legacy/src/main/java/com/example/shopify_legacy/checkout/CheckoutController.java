@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import jakarta.validation.Valid;
 
 @RestController
 @RequiredArgsConstructor
@@ -18,10 +19,9 @@ public class CheckoutController {
 	private final CheckoutService checkoutService;
 
 	@PostMapping("/{checkoutId}/complete")
-	public CheckoutCompleteResponse  postMethodName(
+	public CheckoutCompleteResponse complete(
 		@PathVariable("checkoutId") Long checkoutId,
-		@RequestBody CheckoutCompleteRequest request
-
+		@Valid @RequestBody CheckoutCompleteRequest request
 	) {
 		return checkoutService.complete(checkoutId, request);
 	}

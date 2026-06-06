@@ -25,39 +25,41 @@ public class CheckoutService {
             request.lines()
         );
 
+        PaymentResult paymentResult;
+
         try {
-            PaymentResult paymentResult = paymentService.pay(
+            paymentResult = paymentService.pay(
                 checkoutId,
                 request.paymentToken()
             );
-
-            if (!paymentResult.successed()) {
-                inventoryReservationService.release(
-                    reservation.getId(),
-                    "payment_failed"
-                );
-
-                throw new IllegalStateException("PAYMENT_FAILED");
-            }
-
-            inventoryReservationService.claim(
-                reservation.getId(),
-                paymentResult.paymentId()
-            );
-
-            Order order = orderService.createOrder(
-                checkoutId,
-                paymentResult.paymentId()
-            );
-
-            return new CheckoutCompleteResponse(order.getId(), "completed");
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             inventoryReservationService.release(
                 reservation.getId(),
-                "checkout_error"
+                "payment_error"
             );
 
             throw e;
         }
+
+        if (!paymentResult.succeeded()) {
+            inventoryReservationService.release(
+                reservation.getId(),
+                "payment_failed"
+            );
+
+            throw new IllegalStateException("PAYMENT_FAILED");
+        }
+
+        inventoryReservationService.claim(
+            reservation.getId(),
+            paymentResult.paymentId()
+        );
+
+        Order order = orderService.createOrder(
+            checkoutId,
+            paymentResult.paymentId()
+        );
+
+        return new CheckoutCompleteResponse(order.getId(), "completed");
     }
 }

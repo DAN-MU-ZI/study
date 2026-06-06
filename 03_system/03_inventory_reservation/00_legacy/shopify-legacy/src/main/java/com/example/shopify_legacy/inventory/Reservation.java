@@ -2,6 +2,8 @@ package com.example.shopify_legacy.inventory;
 
 import java.util.List;
 
+import com.example.shopify_legacy.checkout.CheckoutLine;
+
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
@@ -42,16 +44,20 @@ public class Reservation {
 		this.status = ReservationStatus.RESERVED;
 	}
 
-	public static Reservation reserved(Long checkoutId, List<ReservationLine> lines) {
+	public static Reservation reserved(Long checkoutId, List<CheckoutLine> lines) {
 		List<ReservationLine> reservationLines = lines.stream()
-			.map(line -> new ReservationLine(line.getInventoryItemId(), line.getQuantity()))
+			.map(line -> new ReservationLine(line.inventoryItemId(), line.quantity()))
 			.toList();
 
 		return new Reservation(checkoutId, reservationLines);
 	}
 
 	public void claim() {
-		if (status != ReservationStatus.RESERVED) {
+		if (status == ReservationStatus.CLAIMED) {
+			return;
+		}
+
+		if (status == ReservationStatus.RELEASED) {
 			throw new IllegalStateException("ALREADY_RELEASED");
 		}
 	
@@ -59,8 +65,12 @@ public class Reservation {
 	}
 
 	public void release(String reason) {
-		if (status != ReservationStatus.RESERVED) {
-			throw new IllegalStateException("ALREADY_RELEASED");
+		if (status == ReservationStatus.RELEASED) {
+			return;
+		}
+
+		if (status == ReservationStatus.CLAIMED) {
+			throw new IllegalStateException("ALREADY_CLAIMED");
 		}
 	
 		this.status = ReservationStatus.RELEASED;
