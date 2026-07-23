@@ -14,7 +14,7 @@ public class CustomSnowflakeGeneratorPerformanceTest {
 
     @Test
     public void testSnowflakePerformance() throws InterruptedException {
-        CustomSnowflakeGenerator generator = new CustomSnowflakeGenerator(1L);
+        SnowflakeGenerator generator = new SnowflakeGenerator(1L);
 
         int threadCount = 100;
         int iterationsPerThread = 100; // 100 * 100 = 10,000 IDs
