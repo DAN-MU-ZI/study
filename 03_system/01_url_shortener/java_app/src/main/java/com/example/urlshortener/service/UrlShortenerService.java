@@ -1,7 +1,11 @@
 package com.example.urlshortener.service;
 
 import com.example.urlshortener.domain.UrlMapping;
+import com.example.urlshortener.exception.UrlNotFoundException;
 import com.example.urlshortener.repository.UrlMappingRepository;
+import com.example.urlshortener.util.Base62Codec;
+import com.example.urlshortener.util.ShortCode;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -17,45 +21,56 @@ import java.time.Duration;
 public class UrlShortenerService {
 
     private final UrlMappingRepository urlMappingRepository;
-    private final HashGenerator hashGenerator;
     private final RedisTemplate<String, String> redisTemplate;
     private final SnowflakeGenerator idGenerator;
 
     private static final long TTL_SECONDS = 3600;
 
     public String shortenUrl(String longUrl) {
-        // Snowflake: 29bit timestamp + 2bit worker + 11bit sequence)
         long id = idGenerator.nextId();
 
-        String shortUrl = hashGenerator.encode(id);
+        String shortUrl = Base62Codec.encode(id);
 
         UrlMapping mapping = new UrlMapping(id, longUrl);
         urlMappingRepository.insert(mapping);
 
-        try {
-            redisTemplate.opsForValue().set("url:" + shortUrl, longUrl, Duration.ofSeconds(TTL_SECONDS));
-        } catch (DataAccessException e) {
-            log.warn("Redis cache update failed. shortUrl={}", shortUrl, e);
-        }
+
+        writeToCache(shortUrl, longUrl);
 
         return shortUrl;
     }
 
-    public String getOriginalUrl(String shortUrl) {
-        String cacheKey = "url:" + shortUrl;
+    public String getOriginalUrl(ShortCode shortCode) {
+        String cacheKey = "url:" + shortCode.value();
 
-        String cachedLongUrl = redisTemplate.opsForValue().get(cacheKey);
+        String cachedLongUrl = readFromCache(cacheKey);
         if (cachedLongUrl != null) {
             return cachedLongUrl;
         }
 
-        long id = hashGenerator.decode(shortUrl);
+        UrlMapping mapping = urlMappingRepository.findById(shortCode.id())
+                .orElseThrow(() -> new UrlNotFoundException(shortCode.value()));
 
-        UrlMapping mapping = urlMappingRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Short URL not found"));
 
-        redisTemplate.opsForValue().set(cacheKey, mapping.getLongUrl(), Duration.ofSeconds(TTL_SECONDS));
+        writeToCache(shortCode.value(), mapping.getLongUrl());
 
         return mapping.getLongUrl();
+    }
+
+    private void writeToCache(String shortUrl, String longUrl) {
+        try {
+            redisTemplate.opsForValue().set("url:" + shortUrl, longUrl, Duration.ofSeconds(TTL_SECONDS));
+        } catch (DataAccessException e) {
+            log.warn("Redis 캐시 갱신에 실패했습니다. shortUrl={}", shortUrl, e);
+        }
+    }
+
+    private String readFromCache(String cacheKey) {
+        try {
+            return redisTemplate.opsForValue().get(cacheKey);
+        } catch (DataAccessException e) {
+            log.warn("Redis 캐시 조회에 실패했습니다. cacheKey={}", cacheKey, e);
+            return null;
+        }
     }
 }

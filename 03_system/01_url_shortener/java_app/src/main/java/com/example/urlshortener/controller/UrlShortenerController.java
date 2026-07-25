@@ -3,6 +3,7 @@ package com.example.urlshortener.controller;
 import com.example.urlshortener.dto.ShortenRequest;
 import com.example.urlshortener.dto.ShortenResponse;
 import com.example.urlshortener.service.UrlShortenerService;
+import com.example.urlshortener.util.ShortCode;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,28 +25,28 @@ public class UrlShortenerController {
 
     @PostMapping("/api/v1/data/shorten")
     public ResponseEntity<ShortenResponse> shortenUrl(
-        @Valid @RequestBody ShortenRequest request
+            @Valid @RequestBody ShortenRequest request
     ) {
         String shortUrl = urlShortenerService.shortenUrl(request.longUrl());
+
         return ResponseEntity.ok(new ShortenResponse(shortUrl));
     }
 
     @GetMapping("/api/v1/{shortUrl}")
-    public ResponseEntity<Void> redirect(@PathVariable String shortUrl) {
-        try {
-            String longUrl = urlShortenerService.getOriginalUrl(shortUrl);
-            
-            HttpStatus status = "301".equals(redirectMode) ? HttpStatus.MOVED_PERMANENTLY : HttpStatus.FOUND;
-            
-            return ResponseEntity.status(status)
-                    .location(URI.create(longUrl))
-                    .build();
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<Void> redirect(
+            @PathVariable("shortUrl") ShortCode shortCode
+    ) {
+        String longUrl = urlShortenerService.getOriginalUrl(shortCode);
+
+        HttpStatus status = "301".equals(redirectMode)
+                ? HttpStatus.MOVED_PERMANENTLY
+                : HttpStatus.FOUND;
+
+        return ResponseEntity.status(status)
+                .location(URI.create(longUrl))
+                .build();
     }
-    
-    // Health check endpoint for Docker
+
     @GetMapping("/health")
     public ResponseEntity<String> health() {
         return ResponseEntity.ok("OK");
