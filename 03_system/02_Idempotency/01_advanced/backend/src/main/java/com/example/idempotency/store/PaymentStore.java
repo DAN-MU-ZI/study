@@ -11,23 +11,23 @@ import java.util.concurrent.ConcurrentMap;
 @Component
 public class PaymentStore {
 
-    private final ConcurrentMap<String, PaymentAttemptRecord> recordsByCartId = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, PaymentAttemptRecord> recordsByOrderId = new ConcurrentHashMap<>();
 
     public void add(PaymentAttemptRecord record) {
-        PaymentAttemptRecord existing = recordsByCartId.putIfAbsent(record.cartId(), record);
+        PaymentAttemptRecord existing = recordsByOrderId.putIfAbsent(record.orderId(), record);
         if (existing != null) {
-            throw new DuplicatePaymentAttemptException(record.cartId());
+            throw new DuplicatePaymentAttemptException(record.orderId());
         }
     }
 
     public List<PaymentAttemptRecord> findAll() {
-        return recordsByCartId.values().stream()
+        return recordsByOrderId.values().stream()
             .sorted(Comparator.comparing(PaymentAttemptRecord::requestedAt).reversed())
             .toList();
     }
 
-    public List<PaymentAttemptRecord> findByCartId(String cartId) {
-        PaymentAttemptRecord record = recordsByCartId.get(cartId);
+    public List<PaymentAttemptRecord> findByOrderId(String orderId) {
+        PaymentAttemptRecord record = recordsByOrderId.get(orderId);
         if (record == null) {
             return List.of();
         }
@@ -36,8 +36,8 @@ public class PaymentStore {
 
     public static class DuplicatePaymentAttemptException extends RuntimeException {
 
-        public DuplicatePaymentAttemptException(String cartId) {
-            super("Duplicate payment attempt for cart: " + cartId);
+        public DuplicatePaymentAttemptException(String orderId) {
+            super("Duplicate payment attempt for order: " + orderId);
         }
     }
 }

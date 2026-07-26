@@ -1,6 +1,6 @@
 package com.example.idempotency.config;
 
-import com.example.idempotency.domain.CartStatus;
+import com.example.idempotency.domain.OrderStatus;
 import com.example.idempotency.dto.PaymentDto;
 import com.example.idempotency.store.IdempotencyStore;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -61,21 +61,21 @@ class IdempotencyAspectTest {
         String lockToken = "lock-token-1";
 
         when(joinPoint.getArgs()).thenReturn(args);
-        when(idempotencyStore.getRecord("1001"))
+        when(idempotencyStore.getRecord("cust-001", "1001"))
             .thenReturn((IdempotencyStore.IdempotencyRecord) null)
             .thenReturn((IdempotencyStore.IdempotencyRecord) null);
-        when(idempotencyStore.lock("1001")).thenReturn(lockToken);
+        when(idempotencyStore.lock("cust-001", "1001")).thenReturn(lockToken);
 
-        PaymentDto.Response response = new PaymentDto.Response("1001", "pay-1", "pg-1", CartStatus.PAID, Instant.now());
+        PaymentDto.Response response = new PaymentDto.Response("1001", "pay-1", "pg-1", OrderStatus.PAID, Instant.now());
         when(joinPoint.proceed()).thenReturn(response);
 
         Object result = aspect.handleIdempotency(joinPoint, mock(Idempotent.class));
 
         assertThat(result).isEqualTo(response);
-        verify(idempotencyStore).saveProcessing("1001", request);
-        verify(idempotencyStore).saveSuccess("1001", request, response);
-        verify(idempotencyStore).notifyComplete("1001");
-        verify(idempotencyStore).unlock("1001", lockToken);
+        verify(idempotencyStore).saveProcessing("cust-001", "1001", request);
+        verify(idempotencyStore).saveSuccess("cust-001", "1001", request, response);
+        verify(idempotencyStore).notifyComplete("cust-001", "1001");
+        verify(idempotencyStore).unlock("cust-001", "1001", lockToken);
     }
 
     @Test
@@ -85,19 +85,19 @@ class IdempotencyAspectTest {
         Object[] args = new Object[]{"cust-001:ULID123", request};
         String lockToken = "lock-token-2";
 
-        PaymentDto.Response cachedResponse = new PaymentDto.Response("1001", "pay-cached", "pg-1", CartStatus.PAID, Instant.now());
+        PaymentDto.Response cachedResponse = new PaymentDto.Response("1001", "pay-cached", "pg-1", OrderStatus.PAID, Instant.now());
         IdempotencyStore.IdempotencyRecord cachedRecord = IdempotencyStore.IdempotencyRecord.success(request, cachedResponse);
 
         when(joinPoint.getArgs()).thenReturn(args);
-        when(idempotencyStore.getRecord("1001")).thenReturn(null, cachedRecord);
-        when(idempotencyStore.lock("1001")).thenReturn(lockToken);
+        when(idempotencyStore.getRecord("cust-001", "1001")).thenReturn(null, cachedRecord);
+        when(idempotencyStore.lock("cust-001", "1001")).thenReturn(lockToken);
 
         Object result = aspect.handleIdempotency(joinPoint, mock(Idempotent.class));
 
         assertThat(result).isEqualTo(cachedResponse);
         verify(joinPoint, never()).proceed();
-        verify(idempotencyStore, never()).saveSuccess(any(), any(), any());
-        verify(idempotencyStore).unlock("1001", lockToken);
+        verify(idempotencyStore, never()).saveSuccess(any(), any(), any(), any());
+        verify(idempotencyStore).unlock("cust-001", "1001", lockToken);
     }
 
     @Test
@@ -105,12 +105,12 @@ class IdempotencyAspectTest {
         ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
         PaymentDto.Request request = new PaymentDto.Request("1002", "cust-001", 15_000L);
         Object[] args = new Object[]{"cust-001:ULIDWAIT", request};
-        PaymentDto.Response storedResponse = new PaymentDto.Response("1002", "pay-2", "pg-2", CartStatus.PAID, Instant.now());
+        PaymentDto.Response storedResponse = new PaymentDto.Response("1002", "pay-2", "pg-2", OrderStatus.PAID, Instant.now());
 
         when(joinPoint.getArgs()).thenReturn(args);
-        when(idempotencyStore.getRecord("1002")).thenReturn(IdempotencyStore.IdempotencyRecord.processing(request));
-        when(idempotencyStore.lock("1002")).thenReturn(null);
-        when(idempotencyStore.waitForResult("1002", 3_000L))
+        when(idempotencyStore.getRecord("cust-001", "1002")).thenReturn(IdempotencyStore.IdempotencyRecord.processing(request));
+        when(idempotencyStore.lock("cust-001", "1002")).thenReturn(null);
+        when(idempotencyStore.waitForResult("cust-001", "1002", 3_000L))
             .thenReturn(IdempotencyStore.IdempotencyRecord.success(request, storedResponse));
 
         Object result = aspect.handleIdempotency(joinPoint, mock(Idempotent.class));
@@ -126,19 +126,19 @@ class IdempotencyAspectTest {
         Object[] args = new Object[]{"cust-001:ULIDRECOVER", request};
         String lockToken = "lock-token-recover";
         IdempotencyStore.IdempotencyRecord processingRecord = IdempotencyStore.IdempotencyRecord.processing(request);
-        PaymentDto.Response response = new PaymentDto.Response("1002", "pay-2", "pg-2", CartStatus.PAID, Instant.now());
+        PaymentDto.Response response = new PaymentDto.Response("1002", "pay-2", "pg-2", OrderStatus.PAID, Instant.now());
 
         when(joinPoint.getArgs()).thenReturn(args);
-        when(idempotencyStore.getRecord("1002")).thenReturn(processingRecord, processingRecord);
-        when(idempotencyStore.lock("1002")).thenReturn(lockToken);
+        when(idempotencyStore.getRecord("cust-001", "1002")).thenReturn(processingRecord, processingRecord);
+        when(idempotencyStore.lock("cust-001", "1002")).thenReturn(lockToken);
         when(joinPoint.proceed()).thenReturn(response);
 
         Object result = aspect.handleIdempotency(joinPoint, mock(Idempotent.class));
 
         assertThat(result).isEqualTo(response);
-        verify(idempotencyStore).saveProcessing("1002", request);
-        verify(idempotencyStore).saveSuccess("1002", request, response);
-        verify(idempotencyStore).unlock("1002", lockToken);
+        verify(idempotencyStore).saveProcessing("cust-001", "1002", request);
+        verify(idempotencyStore).saveSuccess("cust-001", "1002", request, response);
+        verify(idempotencyStore).unlock("cust-001", "1002", lockToken);
     }
 
     @Test
@@ -149,15 +149,15 @@ class IdempotencyAspectTest {
 
         when(joinPoint.getArgs()).thenReturn(args);
 
-        PaymentDto.Response cachedResponse = new PaymentDto.Response("1001", "pay-cached", "pg-1", CartStatus.PAID, Instant.now());
+        PaymentDto.Response cachedResponse = new PaymentDto.Response("1001", "pay-cached", "pg-1", OrderStatus.PAID, Instant.now());
         IdempotencyStore.IdempotencyRecord cachedRecord = IdempotencyStore.IdempotencyRecord.success(request, cachedResponse);
-        when(idempotencyStore.getRecord("1001")).thenReturn(cachedRecord);
+        when(idempotencyStore.getRecord("cust-001", "1001")).thenReturn(cachedRecord);
 
         Object result = aspect.handleIdempotency(joinPoint, mock(Idempotent.class));
 
         assertThat(result).isEqualTo(cachedResponse);
         verify(joinPoint, never()).proceed();
-        verify(idempotencyStore, never()).saveSuccess(any(), any(), any());
+        verify(idempotencyStore, never()).saveSuccess(any(), any(), any(), any());
     }
 
     @Test
@@ -167,17 +167,17 @@ class IdempotencyAspectTest {
         Object[] args = new Object[]{"cust-001:ULID999", request};
 
         when(joinPoint.getArgs()).thenReturn(args);
-        when(idempotencyStore.getRecord("1002")).thenReturn(null);
-        when(idempotencyStore.lock("1002")).thenReturn(null);
-        when(idempotencyStore.waitForResult("1002", 3_000L))
+        when(idempotencyStore.getRecord("cust-001", "1002")).thenReturn(null);
+        when(idempotencyStore.lock("cust-001", "1002")).thenReturn(null);
+        when(idempotencyStore.waitForResult("cust-001", "1002", 3_000L))
             .thenReturn(IdempotencyStore.IdempotencyRecord.failure(
                 request,
-                new IdempotencyStore.FailureRecord(HttpStatus.CONFLICT.value(), "Cart already checked out: 1002")
+                new IdempotencyStore.FailureRecord(HttpStatus.CONFLICT.value(), "Order already processed: 1002")
             ));
 
         assertThatThrownBy(() -> aspect.handleIdempotency(joinPoint, mock(Idempotent.class)))
             .isInstanceOf(ResponseStatusException.class)
-            .hasMessageContaining("Cart already checked out: 1002");
+            .hasMessageContaining("Order already processed: 1002");
     }
 
     @Test
@@ -187,14 +187,14 @@ class IdempotencyAspectTest {
         Object[] args = new Object[]{"cust-001:ULIDTIMEOUT", request};
 
         when(joinPoint.getArgs()).thenReturn(args);
-        when(idempotencyStore.getRecord("1002")).thenReturn(null);
-        when(idempotencyStore.lock("1002")).thenReturn(null);
-        when(idempotencyStore.waitForResult("1002", 3_000L))
+        when(idempotencyStore.getRecord("cust-001", "1002")).thenReturn(null);
+        when(idempotencyStore.lock("cust-001", "1002")).thenReturn(null);
+        when(idempotencyStore.waitForResult("cust-001", "1002", 3_000L))
             .thenReturn(IdempotencyStore.IdempotencyRecord.processing(request));
 
         assertThatThrownBy(() -> aspect.handleIdempotency(joinPoint, mock(Idempotent.class)))
             .isInstanceOf(ResponseStatusException.class)
-            .hasMessageContaining("Payment processing is still in progress for this cart");
+            .hasMessageContaining("Payment processing is still in progress for this key");
     }
 
     @Test
@@ -205,12 +205,12 @@ class IdempotencyAspectTest {
         Object[] args = new Object[]{"cust-001:ULID1000", incoming};
 
         when(joinPoint.getArgs()).thenReturn(args);
-        when(idempotencyStore.getRecord("1002")).thenReturn(null);
-        when(idempotencyStore.lock("1002")).thenReturn(null);
-        when(idempotencyStore.waitForResult("1002", 3_000L))
+        when(idempotencyStore.getRecord("cust-001", "1002")).thenReturn(null);
+        when(idempotencyStore.lock("cust-001", "1002")).thenReturn(null);
+        when(idempotencyStore.waitForResult("cust-001", "1002", 3_000L))
             .thenReturn(IdempotencyStore.IdempotencyRecord.success(
                 original,
-                new PaymentDto.Response("1002", "pay-2", "pg-2", CartStatus.PAID, Instant.now())
+                new PaymentDto.Response("1002", "pay-2", "pg-2", OrderStatus.PAID, Instant.now())
             ));
 
         assertThatThrownBy(() -> aspect.handleIdempotency(joinPoint, mock(Idempotent.class)))
@@ -226,19 +226,19 @@ class IdempotencyAspectTest {
         String lockToken = "lock-token-3";
 
         when(joinPoint.getArgs()).thenReturn(args);
-        when(idempotencyStore.getRecord("1003"))
+        when(idempotencyStore.getRecord("cust-001", "1003"))
             .thenReturn((IdempotencyStore.IdempotencyRecord) null)
             .thenReturn((IdempotencyStore.IdempotencyRecord) null);
-        when(idempotencyStore.lock("1003")).thenReturn(lockToken);
+        when(idempotencyStore.lock("cust-001", "1003")).thenReturn(lockToken);
         when(joinPoint.proceed()).thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "amount must be positive"));
 
         assertThatThrownBy(() -> aspect.handleIdempotency(joinPoint, mock(Idempotent.class)))
             .isInstanceOf(ResponseStatusException.class)
             .hasMessageContaining("amount must be positive");
 
-        verify(idempotencyStore).saveProcessing("1003", request);
-        verify(idempotencyStore).saveFailure("1003", request, 400, "amount must be positive");
-        verify(idempotencyStore).notifyComplete("1003");
-        verify(idempotencyStore).unlock("1003", lockToken);
+        verify(idempotencyStore).saveProcessing("cust-001", "1003", request);
+        verify(idempotencyStore).saveFailure("cust-001", "1003", request, 400, "amount must be positive");
+        verify(idempotencyStore).notifyComplete("cust-001", "1003");
+        verify(idempotencyStore).unlock("cust-001", "1003", lockToken);
     }
 }

@@ -14,6 +14,6 @@ server:
 payment:
   processing-delay-ms: 700
   pg-delay-ms: 500
-  seed-cart-id: "1001"
+  seed-order-id: "1001"
   seed-customer-id: "cust-001"
   seed-amount: 15000

@@ -4,7 +4,7 @@ import java.time.Instant;
 
 public interface PgGateway {
 
-    PgApprovalResult approve(String cartId, long amount);
+    PgApprovalResult approve(String orderId, long amount);
 
     record PgApprovalResult(String pgTransactionId, Instant approvedAt) {
     }

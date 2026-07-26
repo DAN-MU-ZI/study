@@ -18,7 +18,6 @@ public class InventoryReservationService {
     private final StringRedisTemplate redisTemplate;
     private final ReservationRepository reservationRepository;
     private final InventoryLedgerRepository inventoryLedgerRepository;
-    private final InventoryFailureInjector failureInjector;
 
     public Reservation reserve(Long checkoutId, List<CheckoutLine> lines) {
         String reservationToken = UUID.randomUUID().toString();
@@ -88,14 +87,19 @@ public class InventoryReservationService {
             inventoryLedgerRepository.save(ledger);
         }
 
-        failureInjector.afterLedgerSave();
-
         cleanupRedisReservation(reservation);
-
-        failureInjector.afterRedisCleanup();
 
         reservation.claim();
         reservationRepository.save(reservation);
+    }
+
+    public void claimCleanupFirstForFailureDemo(Long reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow();
+
+        cleanupRedisReservation(reservation);
+
+        throw new IllegalStateException("LEDGER_DEDUCTION_FAILED");
     }
 
     public void release(Long reservationId, String reason) {

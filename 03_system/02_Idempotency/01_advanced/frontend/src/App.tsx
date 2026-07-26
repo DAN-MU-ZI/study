@@ -1,12 +1,12 @@
 import { startTransition, useEffect, useState } from 'react';
-import { createNextCart, getDashboard, submitPayment } from './api';
+import { createNextOrder, getDashboard, submitPayment } from './api';
 import { ulid } from './ulid';
-import { CartSummary } from './components/CartSummary';
+import { OrderSummary } from './components/OrderSummary';
 import { PaymentControls } from './components/PaymentControls';
 import { PaymentHistory } from './components/PaymentHistory';
 import { RequestLogPanel } from './components/RequestLogPanel';
 import { StatusBanner } from './components/StatusBanner';
-import type { CartResponse, DashboardSnapshot, PaymentAttemptRecord, RequestLogEntry } from './types';
+import type { DashboardSnapshot, OrderResponse, PaymentAttemptRecord, RequestLogEntry } from './types';
 
 const DEFAULT_CUSTOMER_ID = 'cust-001';
 const DEFAULT_AMOUNT = 15000;
@@ -24,9 +24,9 @@ function makeIdempotencyKey(customerId: string): string {
   return `${customerId}:${ulid()}`;
 }
 
-function buildPaymentPayload(cartId: string) {
+function buildPaymentPayload(orderId: string) {
   return {
-    cartId,
+    orderId,
     customerId: DEFAULT_CUSTOMER_ID,
     amount: DEFAULT_AMOUNT,
   };
@@ -37,28 +37,28 @@ function buildLogDetail(status: 'pending' | 'success' | 'error') {
 }
 
 export default function App() {
-  const [cart, setCart] = useState<CartResponse | null>(null);
+  const [order, setOrder] = useState<OrderResponse | null>(null);
   const [payments, setPayments] = useState<PaymentAttemptRecord[]>([]);
   const [requestLogs, setRequestLogs] = useState<RequestLogEntry[]>([]);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [pendingRequests, setPendingRequests] = useState(0);
-  const [isCreatingNextCart, setIsCreatingNextCart] = useState(false);
+  const [isCreatingNextOrder, setIsCreatingNextOrder] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [idempotencyKey, setIdempotencyKey] = useState(() => makeIdempotencyKey(DEFAULT_CUSTOMER_ID));
 
   useEffect(() => {
-    if (!cart?.cartId) {
+    if (!order?.orderId) {
       return;
     }
     setIdempotencyKey(makeIdempotencyKey(DEFAULT_CUSTOMER_ID));
-  }, [cart?.cartId]);
+  }, [order?.orderId]);
 
   async function syncDashboard() {
     const snapshot: DashboardSnapshot = await getDashboard();
 
     startTransition(() => {
-      setCart(snapshot.cart);
+      setOrder(snapshot.order);
       setPayments(snapshot.payments);
       setLastSyncedAt(new Date().toISOString());
       setError(null);
@@ -86,7 +86,7 @@ export default function App() {
   }
 
   async function runPayment() {
-    if (!cart) {
+    if (!order) {
       return;
     }
 
@@ -103,7 +103,7 @@ export default function App() {
     setError(null);
 
     try {
-      const response = await submitPayment(buildPaymentPayload(cart.cartId), idempotencyKey);
+      const response = await submitPayment(buildPaymentPayload(order.orderId), idempotencyKey);
       const finishedAt = new Date().toISOString();
 
       setRequestLogs((current) =>
@@ -144,15 +144,15 @@ export default function App() {
     }
   }
 
-  async function startNextCart() {
-    setIsCreatingNextCart(true);
+  async function startNextOrder() {
+    setIsCreatingNextOrder(true);
     setError(null);
 
     try {
-      const nextCart = await createNextCart();
+      const nextOrder = await createNextOrder();
 
       startTransition(() => {
-        setCart(nextCart);
+        setOrder(nextOrder);
         setPayments([]);
         setRequestLogs([]);
         setLastSyncedAt(new Date().toISOString());
@@ -160,9 +160,9 @@ export default function App() {
 
       await syncDashboard();
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : 'Failed to create next cart');
+      setError(caughtError instanceof Error ? caughtError.message : 'Failed to create next order');
     } finally {
-      setIsCreatingNextCart(false);
+      setIsCreatingNextOrder(false);
     }
   }
 
@@ -173,35 +173,35 @@ export default function App() {
     ? 'bootstrapping'
     : pendingRequests > 0
       ? `submitting (${pendingRequests})`
-      : isCreatingNextCart
-        ? 'creating next cart'
+      : isCreatingNextOrder
+        ? 'creating next order'
         : error
           ? 'error'
           : 'idle';
 
-  const canPay = cart?.status === 'PENDING' && pendingRequests === 0 && !isCreatingNextCart;
-  const canCreateNextCart = cart?.status === 'PAID' && pendingRequests === 0;
+  const canPay = order?.status === 'PENDING' && pendingRequests === 0 && !isCreatingNextOrder;
+  const canCreateNextOrder = order?.status === 'PAID' && pendingRequests === 0;
 
   return (
     <main className="shell">
       <section className="page-header">
         <div>
           <p className="eyebrow">Idempotency advanced</p>
-          <h1 data-testid="page-title">Payment and cart idempotency QA lab</h1>
+          <h1 data-testid="page-title">Payment idempotency QA lab</h1>
           <p className="page-copy">
-            Reuse the same idempotency key while one cart is processing, then mint a fresh key only when the next cart starts.
+            Reuse the same idempotency key while one order is processing, then mint a fresh key only when the next order starts.
           </p>
         </div>
       </section>
 
       <section className="summary-strip" aria-label="advanced summary">
         <div className="summary-item">
-          <span className="summary-label">Cart ID</span>
-          <strong data-testid="summary-cart-id">{cart?.cartId ?? 'loading'}</strong>
+          <span className="summary-label">Order ID</span>
+          <strong data-testid="summary-order-id">{order?.orderId ?? 'loading'}</strong>
         </div>
         <div className="summary-item">
-          <span className="summary-label">Cart status</span>
-          <strong>{cart?.status ?? 'PENDING'}</strong>
+          <span className="summary-label">Order status</span>
+          <strong>{order?.status ?? 'PENDING'}</strong>
         </div>
         <div className="summary-item">
           <span className="summary-label">Evidence count</span>
@@ -223,15 +223,15 @@ export default function App() {
 
       <section className="grid">
         <div className="grid-main">
-          <CartSummary cart={cart} lastSyncedAt={lastSyncedAt} paymentCount={payments.length} />
+          <OrderSummary order={order} lastSyncedAt={lastSyncedAt} paymentCount={payments.length} />
           <PaymentControls
             requestState={requestState}
             isSubmitting={pendingRequests > 0}
             canPay={Boolean(canPay)}
-            canCreateNextCart={Boolean(canCreateNextCart)}
-            isCreatingNextCart={isCreatingNextCart}
+            canCreateNextOrder={Boolean(canCreateNextOrder)}
+            isCreatingNextOrder={isCreatingNextOrder}
             onPay={() => void runPayment()}
-            onCreateNextCart={() => void startNextCart()}
+            onCreateNextOrder={() => void startNextOrder()}
           />
         </div>
 

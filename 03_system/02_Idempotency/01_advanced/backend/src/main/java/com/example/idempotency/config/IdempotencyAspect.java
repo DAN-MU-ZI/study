@@ -14,10 +14,6 @@ import org.springframework.web.server.ResponseStatusException;
 public class IdempotencyAspect {
 
     private static final long WAIT_TIMEOUT_MS = 3_000L;
-    private static final String MISSING_REQUEST_MESSAGE = "Payment request is required";
-    private static final String INVALID_PAYLOAD_MESSAGE = "Idempotency key used with different request payload";
-    private static final String PROCESSING_MESSAGE = "Payment processing is still in progress for this cart";
-    private static final String TIMEOUT_MESSAGE = "Payment processing timed out for this cart";
 
     private final IdempotencyStore idempotencyStore;
 
@@ -27,17 +23,24 @@ public class IdempotencyAspect {
 
     @Around("@annotation(idempotent)")
     public Object handleIdempotency(ProceedingJoinPoint joinPoint, Idempotent idempotent) throws Throwable {
-        String idempotencyKey = extractIdempotencyKey(joinPoint.getArgs());
-        if (!useIdempotency(idempotencyKey)) {
+        Object[] args = joinPoint.getArgs();
+        String idempotencyKey = (String) args[0];
+        PaymentDto.Request request = (PaymentDto.Request) args[1];
+
+        boolean useIdempotency = idempotencyKey != null && !idempotencyKey.isBlank();
+        if (!useIdempotency) {
             return joinPoint.proceed();
         }
 
-        PaymentDto.Request request = extractRequest(joinPoint.getArgs());
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payment request is required");
+        }
+
         String customerId = request.customerId();
-        String cartId = request.cartId();
+        String orderId = request.orderId();
         validateKeyOwnership(idempotencyKey, customerId);
 
-        IdempotencyStore.IdempotencyRecord existing = idempotencyStore.getRecord(cartId);
+        IdempotencyStore.IdempotencyRecord existing = idempotencyStore.getRecord(customerId, orderId);
         if (existing != null) {
             validateRequestConsistency(existing.request(), request);
             if (existing.terminal()) {
@@ -45,12 +48,13 @@ public class IdempotencyAspect {
             }
         }
 
-        String lockToken = idempotencyStore.lock(cartId);
+        String lockToken = idempotencyStore.lock(customerId, orderId);
         if (lockToken == null) {
-            return waitForExistingResult(cartId, request);
+            return waitForExistingResult(customerId, orderId, request);
         }
+
         try {
-            existing = idempotencyStore.getRecord(cartId);
+            existing = idempotencyStore.getRecord(customerId, orderId);
             if (existing != null) {
                 validateRequestConsistency(existing.request(), request);
                 if (existing.terminal()) {
@@ -58,35 +62,19 @@ public class IdempotencyAspect {
                 }
             }
 
-            idempotencyStore.saveProcessing(cartId, request);
+            idempotencyStore.saveProcessing(customerId, orderId, request);
             PaymentDto.Response response = (PaymentDto.Response) joinPoint.proceed();
-            idempotencyStore.saveSuccess(cartId, request, response);
-            idempotencyStore.notifyComplete(cartId);
+            idempotencyStore.saveSuccess(customerId, orderId, request, response);
+            idempotencyStore.notifyComplete(customerId, orderId);
             return response;
         } catch (Throwable throwable) {
             IdempotencyStore.FailureRecord failure = toFailureRecord(throwable);
-            idempotencyStore.saveFailure(cartId, request, failure.statusCode(), failure.message());
-            idempotencyStore.notifyComplete(cartId);
+            idempotencyStore.saveFailure(customerId, orderId, request, failure.statusCode(), failure.message());
+            idempotencyStore.notifyComplete(customerId, orderId);
             throw throwable;
         } finally {
-            idempotencyStore.unlock(cartId, lockToken);
+            idempotencyStore.unlock(customerId, orderId, lockToken);
         }
-    }
-
-    private String extractIdempotencyKey(Object[] args) {
-        return (String) args[0];
-    }
-
-    private PaymentDto.Request extractRequest(Object[] args) {
-        PaymentDto.Request request = (PaymentDto.Request) args[1];
-        if (request == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, MISSING_REQUEST_MESSAGE);
-        }
-        return request;
-    }
-
-    private boolean useIdempotency(String idempotencyKey) {
-        return idempotencyKey != null && !idempotencyKey.isBlank();
     }
 
     private void validateKeyOwnership(String idempotencyKey, String customerId) {
@@ -100,20 +88,20 @@ public class IdempotencyAspect {
 
     private void validateRequestConsistency(PaymentDto.Request cached, PaymentDto.Request incoming) {
         if (!cached.equals(incoming)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, INVALID_PAYLOAD_MESSAGE);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Idempotency key used with different request payload");
         }
     }
 
-    private PaymentDto.Response waitForExistingResult(String cartId, PaymentDto.Request request) {
-        IdempotencyStore.IdempotencyRecord record = idempotencyStore.waitForResult(cartId, WAIT_TIMEOUT_MS);
+    private PaymentDto.Response waitForExistingResult(String customerId, String idempotencyKey, PaymentDto.Request request) {
+        IdempotencyStore.IdempotencyRecord record = idempotencyStore.waitForResult(customerId, idempotencyKey, WAIT_TIMEOUT_MS);
         if (record != null) {
             validateRequestConsistency(record.request(), request);
             if (record.processing()) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, PROCESSING_MESSAGE);
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Payment processing is still in progress for this key");
             }
             return resolveRecord(record, request);
         }
-        throw new ResponseStatusException(HttpStatus.CONFLICT, TIMEOUT_MESSAGE);
+        throw new ResponseStatusException(HttpStatus.CONFLICT, "Payment processing timed out for this key");
     }
 
     private PaymentDto.Response resolveRecord(IdempotencyStore.IdempotencyRecord record, PaymentDto.Request incoming) {

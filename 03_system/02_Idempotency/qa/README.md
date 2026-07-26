@@ -26,10 +26,8 @@
 
 현재 QA 규칙
 - `reset` 엔드포인트에 의존하지 않는다.
-- 새 상태가 필요하면 baseline은 `POST /api/orders/next`, advanced는 `POST /api/carts/next`를 사용한다.
-- 증적 비교는 전체 결제 건수가 아니라 활성 비즈니스 식별자 기준으로 한다.
-  - baseline: `orderId`
-  - advanced: `cartId`
+- 새 상태가 필요하면 `POST /api/orders/next`로 다음 주문을 만든다.
+- 증적 비교는 전체 결제 건수가 아니라 `orderId` 기준으로 한다.
 - baseline과 advanced는 독립 테스트로 실행하되, 테스트 케이스 표는 하나의 QA 표에서 비교형 기대 결과로 관리한다.
 
 권장 실행 순서

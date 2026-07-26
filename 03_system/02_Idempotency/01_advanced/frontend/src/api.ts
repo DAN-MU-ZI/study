@@ -1,6 +1,6 @@
 import type {
   DashboardSnapshot,
-  CartResponse,
+  OrderResponse,
   PaymentAttemptRecord,
   PaymentRequestPayload,
   PaymentResponse,
@@ -41,34 +41,34 @@ async function readError(response: Response): Promise<string> {
   return response.statusText;
 }
 
-export async function getCart(cartId: string): Promise<CartResponse> {
-  const response = await fetch(`/api/carts/${encodeURIComponent(cartId)}`);
+export async function getOrder(orderId: string): Promise<OrderResponse> {
+  const response = await fetch(`/api/orders/${encodeURIComponent(orderId)}`);
   if (!response.ok) {
     throw new Error(await readError(response));
   }
-  return readJson<CartResponse>(response);
+  return readJson<OrderResponse>(response);
 }
 
-export async function getCurrentCart(): Promise<CartResponse> {
-  const response = await fetch('/api/carts/current');
+export async function getCurrentOrder(): Promise<OrderResponse> {
+  const response = await fetch('/api/orders/current');
   if (!response.ok) {
     throw new Error(await readError(response));
   }
-  return readJson<CartResponse>(response);
+  return readJson<OrderResponse>(response);
 }
 
-export async function createNextCart(): Promise<CartResponse> {
-  const response = await fetch('/api/carts/next', {
+export async function createNextOrder(): Promise<OrderResponse> {
+  const response = await fetch('/api/orders/next', {
     method: 'POST',
   });
   if (!response.ok) {
     throw new Error(await readError(response));
   }
-  return readJson<CartResponse>(response);
+  return readJson<OrderResponse>(response);
 }
 
-export async function getPayments(cartId?: string): Promise<PaymentAttemptRecord[]> {
-  const query = cartId ? `?cartId=${encodeURIComponent(cartId)}` : '';
+export async function getPayments(orderId?: string): Promise<PaymentAttemptRecord[]> {
+  const query = orderId ? `?orderId=${encodeURIComponent(orderId)}` : '';
   const response = await fetch(`/api/payments${query}`);
   if (!response.ok) {
     throw new Error(await readError(response));
@@ -77,9 +77,9 @@ export async function getPayments(cartId?: string): Promise<PaymentAttemptRecord
 }
 
 export async function getDashboard(): Promise<DashboardSnapshot> {
-  const cart = await getCurrentCart();
-  const payments = await getPayments(cart.cartId);
-  return { cart, payments };
+  const order = await getCurrentOrder();
+  const payments = await getPayments(order.orderId);
+  return { order, payments };
 }
 
 export async function submitPayment(payload: PaymentRequestPayload, idempotencyKey: string): Promise<PaymentResponse> {

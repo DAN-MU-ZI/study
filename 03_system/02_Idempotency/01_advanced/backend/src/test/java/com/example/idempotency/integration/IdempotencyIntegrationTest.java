@@ -1,15 +1,12 @@
 package com.example.idempotency.integration;
 
-import com.example.idempotency.dto.CartDto;
+import com.example.idempotency.dto.OrderDto;
 import com.example.idempotency.dto.PaymentDto;
-import com.example.idempotency.service.CartService;
 import com.example.idempotency.service.PaymentService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
@@ -37,18 +34,7 @@ class IdempotencyIntegrationTest {
     @Autowired
     private PaymentService paymentService;
 
-    @Autowired
-    private CartService cartService;
-
-    @Autowired
-    private StringRedisTemplate redisTemplate;
-
     private ExecutorService executorService;
-
-    @BeforeEach
-    void clearIdempotencyState() {
-        redisTemplate.getConnectionFactory().getConnection().serverCommands().flushDb();
-    }
 
     @AfterEach
     void tearDown() {
@@ -59,9 +45,9 @@ class IdempotencyIntegrationTest {
 
     @Test
     void concurrentSameKeyAndSamePayload_returnsSameApprovalAndSinglePayment() throws Exception {
-        CartDto.Response cart = cartService.createNextCart();
+        OrderDto.Response order = paymentService.createNextOrder();
         String customerId = uniqueCustomerId("same-key-success");
-        PaymentDto.Request payload = new PaymentDto.Request(cart.cartId(), customerId, 15_000L);
+        PaymentDto.Request payload = new PaymentDto.Request(order.orderId(), customerId, 15_000L);
         String idempotencyKey = customerId + ":integration-success-" + System.nanoTime();
 
         executorService = Executors.newFixedThreadPool(2);
@@ -72,16 +58,16 @@ class IdempotencyIntegrationTest {
 
         assertThat(responses).hasSize(2);
         assertThat(responses.get(0).pgTransactionId()).isEqualTo(responses.get(1).pgTransactionId());
-        assertThat(paymentService.getPayments(cart.cartId())).hasSize(1);
+        assertThat(paymentService.getPayments(order.orderId())).hasSize(1);
     }
 
     @Test
-    void concurrentDifferentKeysOnSameCart_returnsSameApprovalAndSinglePayment() throws Exception {
-        CartDto.Response cart = cartService.createNextCart();
+    void concurrentDifferentKeysOnSameOrder_returnsSameApprovalAndSinglePayment() throws Exception {
+        OrderDto.Response order = paymentService.createNextOrder();
         String customerId = uniqueCustomerId("different-keys-success");
-        PaymentDto.Request payload = new PaymentDto.Request(cart.cartId(), customerId, 15_000L);
-        String firstKey = customerId + ":integration-cart-a-" + System.nanoTime();
-        String secondKey = customerId + ":integration-cart-b-" + System.nanoTime();
+        PaymentDto.Request payload = new PaymentDto.Request(order.orderId(), customerId, 15_000L);
+        String firstKey = customerId + ":integration-order-a-" + System.nanoTime();
+        String secondKey = customerId + ":integration-order-b-" + System.nanoTime();
 
         executorService = Executors.newFixedThreadPool(2);
         List<PaymentDto.Response> responses = runConcurrently(
@@ -91,15 +77,15 @@ class IdempotencyIntegrationTest {
 
         assertThat(responses).hasSize(2);
         assertThat(responses.get(0).pgTransactionId()).isEqualTo(responses.get(1).pgTransactionId());
-        assertThat(paymentService.getPayments(cart.cartId())).hasSize(1);
+        assertThat(paymentService.getPayments(order.orderId())).hasSize(1);
     }
 
     @Test
     void concurrentSameKeyWithDifferentPayload_rejectsWaitingRequest() throws Exception {
-        CartDto.Response cart = cartService.createNextCart();
+        OrderDto.Response order = paymentService.createNextOrder();
         String customerId = uniqueCustomerId("same-key-mismatch");
-        PaymentDto.Request original = new PaymentDto.Request(cart.cartId(), customerId, 15_000L);
-        PaymentDto.Request conflicting = new PaymentDto.Request(cart.cartId(), customerId, 9_900L);
+        PaymentDto.Request original = new PaymentDto.Request(order.orderId(), customerId, 15_000L);
+        PaymentDto.Request conflicting = new PaymentDto.Request(order.orderId(), customerId, 9_900L);
         String idempotencyKey = customerId + ":integration-mismatch-" + System.nanoTime();
 
         executorService = Executors.newFixedThreadPool(2);
@@ -115,17 +101,17 @@ class IdempotencyIntegrationTest {
             assertThat(exception.getStatusCode().value()).isEqualTo(400);
             assertThat(exception.getReason()).isEqualTo("Idempotency key used with different request payload");
         });
-        assertThat(paymentService.getPayments(cart.cartId())).hasSize(1);
+        assertThat(paymentService.getPayments(order.orderId())).hasSize(1);
     }
 
     @Test
-    void concurrentDifferentKeysOnSameCartWithDifferentPayload_rejectsWaitingRequest() throws Exception {
-        CartDto.Response cart = cartService.createNextCart();
+    void concurrentDifferentKeysOnSameOrderWithDifferentPayload_rejectsWaitingRequest() throws Exception {
+        OrderDto.Response order = paymentService.createNextOrder();
         String customerId = uniqueCustomerId("different-keys-mismatch");
-        PaymentDto.Request original = new PaymentDto.Request(cart.cartId(), customerId, 15_000L);
-        PaymentDto.Request conflicting = new PaymentDto.Request(cart.cartId(), customerId, 9_900L);
-        String firstKey = customerId + ":integration-cart-mismatch-a-" + System.nanoTime();
-        String secondKey = customerId + ":integration-cart-mismatch-b-" + System.nanoTime();
+        PaymentDto.Request original = new PaymentDto.Request(order.orderId(), customerId, 15_000L);
+        PaymentDto.Request conflicting = new PaymentDto.Request(order.orderId(), customerId, 9_900L);
+        String firstKey = customerId + ":integration-order-mismatch-a-" + System.nanoTime();
+        String secondKey = customerId + ":integration-order-mismatch-b-" + System.nanoTime();
 
         executorService = Executors.newFixedThreadPool(2);
         List<Object> results = runConcurrentlyCapturingFailure(
@@ -140,14 +126,14 @@ class IdempotencyIntegrationTest {
             assertThat(exception.getStatusCode().value()).isEqualTo(400);
             assertThat(exception.getReason()).isEqualTo("Idempotency key used with different request payload");
         });
-        assertThat(paymentService.getPayments(cart.cartId())).hasSize(1);
+        assertThat(paymentService.getPayments(order.orderId())).hasSize(1);
     }
 
     @Test
     void concurrentSameKeyWhenLeaderFails_returnsStoredFailureToFollowers() throws Exception {
-        CartDto.Response cart = cartService.createNextCart();
+        OrderDto.Response order = paymentService.createNextOrder();
         String customerId = uniqueCustomerId("same-key-failure");
-        PaymentDto.Request invalidPayload = new PaymentDto.Request(cart.cartId(), customerId, 0L);
+        PaymentDto.Request invalidPayload = new PaymentDto.Request(order.orderId(), customerId, 0L);
         String idempotencyKey = customerId + ":integration-failure-" + System.nanoTime();
 
         executorService = Executors.newFixedThreadPool(2);
@@ -162,7 +148,7 @@ class IdempotencyIntegrationTest {
             assertThat(exception.getStatusCode().value()).isEqualTo(400);
             assertThat(exception.getReason()).isEqualTo("amount must be positive");
         });
-        assertThat(paymentService.getPayments(cart.cartId())).isEmpty();
+        assertThat(paymentService.getPayments(order.orderId())).isEmpty();
     }
 
     @SafeVarargs
