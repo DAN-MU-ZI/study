@@ -10,14 +10,14 @@ export function RequestLogPanel({ logs }: RequestLogPanelProps) {
       <div className="card-header">
         <div>
           <p className="eyebrow">Frontend log</p>
-          <h2>요청 로그</h2>
+          <h2>Request log</h2>
         </div>
-        <span className="meta-pill">{logs.length}건</span>
+        <span className="meta-pill">{logs.length} items</span>
       </div>
 
       <div className="request-log" data-testid="request-log">
         {logs.length === 0 ? (
-          <div className="empty-state">아직 사용자 액션이 없습니다.</div>
+          <div className="empty-state">No user actions yet.</div>
         ) : (
           logs.map((log) => (
             <article className={`request-log-row request-log-${log.status}`} data-testid="request-log-row" key={log.id}>

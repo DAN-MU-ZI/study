@@ -10,7 +10,7 @@ export function StatusBanner({ duplicateMessages, error }: StatusBannerProps) {
         <section className="banner banner-warning" data-testid="duplicate-warning" role="status">
           <div>
             <p className="eyebrow">Warning</p>
-            <strong>동일 주문에서 승인 이력이 {duplicateMessages.length}건 확인되었습니다.</strong>
+            <strong>{duplicateMessages.length} approval records were detected for the same cart.</strong>
           </div>
           <div className="banner-details">
             {duplicateMessages.map((message) => (

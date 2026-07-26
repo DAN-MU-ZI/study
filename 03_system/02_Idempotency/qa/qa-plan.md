@@ -7,12 +7,12 @@
 ## 목적
 - 최종 QA 판정 기준은 advanced가 충족해야 하는 안정성 요구사항으로 통일한다.
 - baseline에서 중복 승인 문제가 실제로 재현되는지 확인한다.
-- advanced에서 같은 주문에 대한 중복 승인이 방지되는지 확인한다.
+- advanced에서 같은 장바구니에 대한 중복 승인이 방지되는지 확인한다.
 - 프런트 상태, 백엔드 상태, 산출물 구조가 서로 일치하는지 확인한다.
 
 ## 범위
 - 백엔드 API 동작
-- 프런트 주문 상태와 결제 이력 렌더링
+- 프런트 결제 대상 상태와 결제 이력 렌더링
 - Docker 기반 백엔드 테스트
 - Playwright 기반 E2E 검증
 - 실행 후 남는 QA 산출물의 적절성 검토
@@ -24,8 +24,10 @@
 
 ## 공통 전제
 - Docker Desktop이 실행 중이다.
-- 새 상태가 필요하면 `POST /api/orders/next`를 사용한다.
-- 증적 비교는 반드시 활성 `orderId` 기준으로 한다.
+- 새 상태가 필요하면 baseline은 `POST /api/orders/next`, advanced는 `POST /api/carts/next`를 사용한다.
+- 증적 비교는 반드시 활성 비즈니스 식별자 기준으로 한다.
+  - baseline: `orderId`
+  - advanced: `cartId`
 - baseline과 advanced는 독립 테스트로 취급한다.
 - baseline의 해석도 advanced 안정성 요구사항을 기준으로 한다.
 - 테스트 케이스 정의는 `qa/test-cases.csv` 한 곳에서 관리하고, 기대 결과도 비교형 문구로 같은 표 안에서 관리한다.
@@ -41,14 +43,14 @@
 - 하지만 QA 판정 기준에서는 advanced 안정성 요구사항 미충족으로 기록해야 한다.
 
 ## advanced 검증 목표
-- 같은 주문은 멱등 단위로 취급되어 최대 1건만 승인되어야 한다.
-- 새 주문 시작 시 멱등성 키가 다시 발급되어야 한다.
+- 같은 장바구니는 멱등 단위로 취급되어 최대 1건만 승인되어야 한다.
+- 새 장바구니 시작 시 멱등성 키가 다시 발급되어야 한다.
 
 ## 백엔드 통합 테스트에서 검증할 항목
 - advanced: 같은 키와 같은 payload 결과 재사용
-- advanced: 다른 키여도 같은 주문이면 같은 결과 재사용
+- advanced: 다른 키여도 같은 장바구니면 같은 결과 재사용
 - advanced: 같은 키와 다른 payload 거부
-- advanced: 다른 키지만 같은 주문에 다른 payload 거부
+- advanced: 다른 키지만 같은 장바구니에 다른 payload 거부
 - advanced: 선행 요청 실패의 동일 실패 재전달
 - baseline: 동일 주문 동시 요청 시 중복 승인 발생
 
@@ -70,8 +72,10 @@
 - Playwright 산출물은 사용자 경로 검증 결과만 담아야 한다.
 
 ## 검토 포인트
-- UI의 현재 주문 상태와 `GET /api/orders/current`가 같은가
-- UI 결제 이력과 `GET /api/payments?orderId=...`가 같은가
+- baseline: UI의 현재 주문 상태와 `GET /api/orders/current`가 같은가
+- advanced: UI의 현재 장바구니 상태와 `GET /api/carts/current`가 같은가
+- baseline: UI 결제 이력과 `GET /api/payments?orderId=...`가 같은가
+- advanced: UI 결제 이력과 `GET /api/payments?cartId=...`가 같은가
 - advanced에서는 중복 승인 경고가 없어야 하는가
 - baseline에서는 중복 승인 경고가 보여야 하는가
 - 산출물 디렉터리 이름과 공용 테스트 케이스 표가 대응되는가

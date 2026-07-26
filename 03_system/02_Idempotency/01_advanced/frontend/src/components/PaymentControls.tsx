@@ -2,20 +2,20 @@ interface PaymentControlsProps {
   requestState: string;
   isSubmitting: boolean;
   canPay: boolean;
-  canCreateNextOrder: boolean;
-  isCreatingNextOrder: boolean;
+  canCreateNextCart: boolean;
+  isCreatingNextCart: boolean;
   onPay: () => void;
-  onCreateNextOrder: () => void;
+  onCreateNextCart: () => void;
 }
 
 export function PaymentControls({
   requestState,
   isSubmitting,
   canPay,
-  canCreateNextOrder,
-  isCreatingNextOrder,
+  canCreateNextCart,
+  isCreatingNextCart,
   onPay,
-  onCreateNextOrder,
+  onCreateNextCart,
 }: PaymentControlsProps) {
   return (
     <section className="card controls-card">
@@ -31,21 +31,21 @@ export function PaymentControls({
 
       <div className="controls-actions">
         <button className="primary-button" data-testid="pay-button" type="button" onClick={onPay} disabled={!canPay}>
-          Pay order
+          Pay cart
         </button>
         <button
           className="primary-button"
-          data-testid="new-order-button"
+          data-testid="new-cart-button"
           type="button"
-          onClick={onCreateNextOrder}
-          disabled={!canCreateNextOrder || isCreatingNextOrder}
+          onClick={onCreateNextCart}
+          disabled={!canCreateNextCart || isCreatingNextCart}
         >
-          {isCreatingNextOrder ? 'Creating next order...' : 'Start next order'}
+          {isCreatingNextCart ? 'Creating next cart...' : 'Start next cart'}
         </button>
       </div>
 
       <p className="controls-help">
-        Reuse one idempotency key while the same order is in flight, then issue a new key only when a new order starts.
+        Reuse one idempotency key while the same cart is in flight, then issue a new key only when a new cart starts.
       </p>
     </section>
   );

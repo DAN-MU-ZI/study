@@ -3,13 +3,16 @@ package com.example.idempotency.domain;
 import java.time.Instant;
 
 public record PaymentAttemptRecord(
-    String orderId,
+    String cartId,
     String customerId,
     long amount,
     String paymentId,
     String pgTransactionId,
-    OrderStatus status,
+    CartStatus status,
     Instant requestedAt,
     Instant approvedAt
 ) {
+    public String getOrderId() {
+        return cartId;
+    }
 }

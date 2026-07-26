@@ -1,25 +1,25 @@
-export type OrderStatus = 'PENDING' | 'PAID';
+export type CartStatus = 'PENDING' | 'PAID';
 
-export interface OrderResponse {
-  orderId: string;
-  status: OrderStatus;
+export interface CartResponse {
+  cartId: string;
+  status: CartStatus;
   lastPaymentId: string | null;
   lastPgTransactionId: string | null;
 }
 
 export interface PaymentRequestPayload {
-  orderId: string;
+  cartId: string;
   customerId: string;
   amount: number;
 }
 
 export interface PaymentAttemptRecord {
-  orderId: string;
+  cartId: string;
   customerId: string;
   amount: number;
   paymentId: string;
   pgTransactionId: string;
-  status: OrderStatus;
+  status: CartStatus;
   requestedAt: string;
   approvedAt: string;
 }
@@ -29,7 +29,7 @@ export interface PaymentResponse extends PaymentAttemptRecord {
 }
 
 export interface DashboardSnapshot {
-  order: OrderResponse;
+  cart: CartResponse;
   payments: PaymentAttemptRecord[];
 }
 

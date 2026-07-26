@@ -1,6 +1,7 @@
 package com.example.idempotency.dto;
 
-import com.example.idempotency.domain.OrderStatus;
+import com.example.idempotency.domain.CartStatus;
+import com.fasterxml.jackson.annotation.JsonAlias;
 
 import java.time.Instant;
 
@@ -10,18 +11,22 @@ public final class PaymentDto {
     }
 
     public record Request(
-        String orderId,
+        @JsonAlias("orderId")
+        String cartId,
         String customerId,
         long amount
     ) {
     }
 
     public record Response(
-        String orderId,
+        String cartId,
         String paymentId,
         String pgTransactionId,
-        OrderStatus status,
+        CartStatus status,
         Instant processedAt
     ) {
+        public String getOrderId() {
+            return cartId;
+        }
     }
 }

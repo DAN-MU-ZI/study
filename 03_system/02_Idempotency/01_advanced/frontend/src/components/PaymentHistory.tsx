@@ -35,8 +35,8 @@ export function PaymentHistory({ payments }: PaymentHistoryProps) {
 
               <div className="payment-row-grid">
                 <div>
-                  <span className="field-label">Order</span>
-                  <strong data-testid="payment-row-order-id">{payment.orderId}</strong>
+                  <span className="field-label">Cart</span>
+                  <strong data-testid="payment-row-cart-id">{payment.cartId}</strong>
                 </div>
                 <div>
                   <span className="field-label">PG transaction</span>

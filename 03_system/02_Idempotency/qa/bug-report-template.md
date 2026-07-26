@@ -11,10 +11,14 @@
 - 날짜 / 시간대:
 
 ## 사전 조건
-- 활성 주문 ID:
+- 활성 비즈니스 ID:
+  - baseline: `orderId`
+  - advanced: `cartId`
 - Idempotency key:
 - Payload:
-- 시나리오 전에 `POST /api/orders/next`를 사용했는지:
+- 시나리오 전에 새 결제 대상을 생성했는지:
+  - baseline: `POST /api/orders/next`
+  - advanced: `POST /api/carts/next`
 
 ## 재현 절차
 1. ...
@@ -39,9 +43,12 @@
 - 스크린샷 경로:
 - 동영상 경로:
 - 백엔드 응답 본문:
-- `GET /api/orders/current` 결과:
-- `GET /api/orders/{orderId}` 결과:
-- `GET /api/payments?orderId={orderId}` 결과:
+- baseline `GET /api/orders/current` 결과:
+- baseline `GET /api/orders/{orderId}` 결과:
+- baseline `GET /api/payments?orderId={orderId}` 결과:
+- advanced `GET /api/carts/current` 결과:
+- advanced `GET /api/carts/{cartId}` 결과:
+- advanced `GET /api/payments?cartId={cartId}` 결과:
 
 ## 메모
 - 동시성 타이밍 관련 정보

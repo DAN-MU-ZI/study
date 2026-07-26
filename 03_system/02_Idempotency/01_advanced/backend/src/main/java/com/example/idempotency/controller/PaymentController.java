@@ -1,12 +1,10 @@
 package com.example.idempotency.controller;
 
 import com.example.idempotency.domain.PaymentAttemptRecord;
-import com.example.idempotency.dto.OrderDto;
 import com.example.idempotency.dto.PaymentDto;
 import com.example.idempotency.service.PaymentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -35,23 +33,22 @@ public class PaymentController {
     }
 
     @GetMapping("/payments")
-    public ResponseEntity<List<PaymentAttemptRecord>> getPayments(@RequestParam(value = "orderId", required = false) String orderId) {
-        return ResponseEntity.ok(paymentService.getPayments(orderId));
+    public ResponseEntity<List<PaymentAttemptRecord>> getPayments(
+        @RequestParam(value = "cartId", required = false) String cartId,
+        @RequestParam(value = "orderId", required = false) String legacyOrderId
+    ) {
+        return ResponseEntity.ok(paymentService.getPayments(resolveCartScope(cartId, legacyOrderId)));
     }
 
-    @GetMapping("/orders/{orderId}")
-    public ResponseEntity<OrderDto.Response> getOrder(@PathVariable String orderId) {
-        return ResponseEntity.ok(paymentService.getOrder(orderId));
+    private String resolveCartScope(String cartId, String legacyOrderId) {
+        String normalizedCartId = normalize(cartId);
+        return normalizedCartId != null ? normalizedCartId : normalize(legacyOrderId);
     }
 
-    @GetMapping("/orders/current")
-    public ResponseEntity<OrderDto.Response> getCurrentOrder() {
-        return ResponseEntity.ok(paymentService.getCurrentOrder());
-    }
-
-    @PostMapping("/orders/next")
-    public ResponseEntity<OrderDto.Response> createNextOrder() {
-        return ResponseEntity.ok(paymentService.createNextOrder());
+    private String normalize(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value;
     }
 }
-

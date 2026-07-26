@@ -161,10 +161,30 @@ export async function createNextOrder(page: Page) {
   }>(response);
 }
 
+export async function createNextCart(page: Page) {
+  const response = await page.request.post('/api/carts/next');
+  return requestJson<{
+    cartId: string;
+    status: 'PENDING' | 'PAID';
+    lastPaymentId: string | null;
+    lastPgTransactionId: string | null;
+  }>(response);
+}
+
 export async function getCurrentOrder(page: Page) {
   const response = await page.request.get('/api/orders/current');
   return requestJson<{
     orderId: string;
+    status: 'PENDING' | 'PAID';
+    lastPaymentId: string | null;
+    lastPgTransactionId: string | null;
+  }>(response);
+}
+
+export async function getCurrentCart(page: Page) {
+  const response = await page.request.get('/api/carts/current');
+  return requestJson<{
+    cartId: string;
     status: 'PENDING' | 'PAID';
     lastPaymentId: string | null;
     lastPgTransactionId: string | null;
@@ -189,10 +209,38 @@ export async function getPayments(page: Page, orderId?: string) {
   >(response);
 }
 
+export async function getCartPayments(page: Page, cartId?: string) {
+  const query = cartId ? `?cartId=${encodeURIComponent(cartId)}` : '';
+  const response = await page.request.get(`/api/payments${query}`);
+  return requestJson<
+    Array<{
+      cartId: string;
+      customerId: string;
+      amount: number;
+      paymentId: string;
+      pgTransactionId: string;
+      status: string;
+      threadName: string;
+      requestedAt: string;
+      approvedAt: string;
+    }>
+  >(response);
+}
+
 export async function getOrder(page: Page, orderId: string) {
   const response = await page.request.get(`/api/orders/${encodeURIComponent(orderId)}`);
   return requestJson<{
     orderId: string;
+    status: 'PENDING' | 'PAID';
+    lastPaymentId: string | null;
+    lastPgTransactionId: string | null;
+  }>(response);
+}
+
+export async function getCart(page: Page, cartId: string) {
+  const response = await page.request.get(`/api/carts/${encodeURIComponent(cartId)}`);
+  return requestJson<{
+    cartId: string;
     status: 'PENDING' | 'PAID';
     lastPaymentId: string | null;
     lastPgTransactionId: string | null;
@@ -206,6 +254,25 @@ export async function waitForOrderPaid(page: Page, orderId: string) {
       const payments = await getPayments(page, orderId);
       return {
         status: order.status,
+        paymentCount: payments.length,
+      };
+    }, {
+      timeout: 10_000,
+      intervals: [200, 400, 800],
+    })
+    .toEqual({
+      status: 'PAID',
+      paymentCount: 1,
+    });
+}
+
+export async function waitForCartPaid(page: Page, cartId: string) {
+  await expect
+    .poll(async () => {
+      const cart = await getCart(page, cartId);
+      const payments = await getCartPayments(page, cartId);
+      return {
+        status: cart.status,
         paymentCount: payments.length,
       };
     }, {

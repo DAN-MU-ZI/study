@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: stackoverflow-db-lab-api
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:54320/stackoverflow_lab}
+    username: ${POSTGRES_USER:study}
+    password: ${POSTGRES_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      minimum-idle: ${DB_POOL_MIN_IDLE:2}
+      connection-timeout: 3000
+      data-source-properties:
+        ApplicationName: stackoverflow-db-lab-api
+  threads:
+    virtual:
+      enabled: false
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true

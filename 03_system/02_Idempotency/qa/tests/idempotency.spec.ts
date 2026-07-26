@@ -1,88 +1,88 @@
-import { expect, getCurrentOrder, getOrder, getPayments, humanClick, observe, test, waitForOrderPaid } from './fixtures';
+import { expect, getCart, getCartPayments, getCurrentCart, humanClick, observe, test, waitForCartPaid } from './fixtures';
 import { writeReadableArtifacts } from './readableArtifacts';
 
-test.describe('고급 멱등성 검증', () => {
+test.describe('advanced cart idempotency verification', () => {
   test.afterEach(async ({ page, qaDebug }, testInfo) => {
     await writeReadableArtifacts(page, testInfo, qaDebug.snapshot());
   });
 
   test.beforeEach(async ({ page }) => {
-    const nextOrderResponse = await page.request.post('/api/orders/next');
-    const nextOrder = await nextOrderResponse.json();
+    const nextCartResponse = await page.request.post('/api/carts/next');
+    const nextCart = await nextCartResponse.json();
 
     await page.goto('/');
     await expect(page.getByTestId('page-title')).toBeVisible();
     await expect(page.getByTestId('loading-indicator')).toBeHidden();
-    await expect(page.getByTestId('order-id')).toHaveText(nextOrder.orderId);
+    await expect(page.getByTestId('cart-id')).toHaveText(nextCart.cartId);
   });
 
-  test('TB-000: 현재 주문이 pending으로 보인다', async ({ page }) => {
-    const currentOrder = await getCurrentOrder(page);
+  test('TB-000: current cart is shown as pending', async ({ page }) => {
+    const currentCart = await getCurrentCart(page);
 
-    await expect(page.getByTestId('order-card')).toBeVisible();
-    await expect(page.getByTestId('order-id')).toHaveText(currentOrder.orderId);
-    await expect(page.getByTestId('order-status')).toHaveText('pending');
+    await expect(page.getByTestId('cart-card')).toBeVisible();
+    await expect(page.getByTestId('cart-id')).toHaveText(currentCart.cartId);
+    await expect(page.getByTestId('cart-status')).toHaveText('pending');
     await expect(page.getByTestId('payment-history')).toBeVisible();
     await expect(page.getByTestId('request-log')).toBeVisible();
     await expect(page.getByTestId('pay-button')).toBeEnabled();
-    await expect(page.getByTestId('new-order-button')).toBeDisabled();
+    await expect(page.getByTestId('new-cart-button')).toBeDisabled();
   });
 
-  test('TB-001: 결제 버튼을 한 번 클릭하면 정상 승인된다', async ({ page }) => {
-    const currentOrder = await getCurrentOrder(page);
+  test('TB-001: a single pay action creates one approval', async ({ page }) => {
+    const currentCart = await getCurrentCart(page);
 
     await page.getByTestId('pay-button').click();
-    await waitForOrderPaid(page, currentOrder.orderId);
+    await waitForCartPaid(page, currentCart.cartId);
 
     await expect(page.getByTestId('request-state')).toContainText('idle');
-    await expect(page.getByTestId('order-status')).toHaveText('paid');
+    await expect(page.getByTestId('cart-status')).toHaveText('paid');
     await expect(page.getByTestId('payment-row')).toHaveCount(1);
     await expect(page.getByTestId('duplicate-warning')).toHaveCount(0);
 
-    const payments = await getPayments(page, currentOrder.orderId);
+    const payments = await getCartPayments(page, currentCart.cartId);
     expect(payments).toHaveLength(1);
-    expect(payments[0].orderId).toBe(currentOrder.orderId);
+    expect(payments[0].cartId).toBe(currentCart.cartId);
   });
 
-  test('TB-002: 같은 주문을 빠르게 반복 클릭했을 때의 결과를 확인한다', async ({ page }) => {
-    const currentOrder = await getCurrentOrder(page);
+  test('TB-002: double click still collapses into one payment', async ({ page }) => {
+    const currentCart = await getCurrentCart(page);
 
     await page.getByTestId('pay-button').dblclick();
-    await waitForOrderPaid(page, currentOrder.orderId);
+    await waitForCartPaid(page, currentCart.cartId);
 
     await expect(page.getByTestId('request-state')).toContainText('idle');
     await expect(page.getByTestId('duplicate-warning')).toHaveCount(0);
     await expect(page.getByTestId('payment-row')).toHaveCount(1);
 
-    const payments = await getPayments(page, currentOrder.orderId);
+    const payments = await getCartPayments(page, currentCart.cartId);
     expect(payments).toHaveLength(1);
     expect(new Set(payments.map((payment) => payment.pgTransactionId)).size).toBe(1);
   });
 
-  test('TB-003: 처리 중 버튼 상태를 확인한다', async ({ page }) => {
+  test('TB-003: buttons reflect in-flight processing state', async ({ page }) => {
     await humanClick(page, page.getByTestId('pay-button'));
     await expect(page.getByTestId('request-state')).toContainText('submitting');
     await expect(page.getByTestId('pay-button')).toBeDisabled();
-    await expect(page.getByTestId('new-order-button')).toBeDisabled();
+    await expect(page.getByTestId('new-cart-button')).toBeDisabled();
     await observe(page, 150);
   });
 
-  test('TB-004: 결제 후 주문 상태와 결제 이력이 일치한다', async ({ page }) => {
-    const currentOrder = await getCurrentOrder(page);
+  test('TB-004: cart state and payment evidence stay aligned', async ({ page }) => {
+    const currentCart = await getCurrentCart(page);
 
     await page.getByTestId('pay-button').click();
-    await waitForOrderPaid(page, currentOrder.orderId);
+    await waitForCartPaid(page, currentCart.cartId);
 
-    const order = await getOrder(page, currentOrder.orderId);
-    const payments = await getPayments(page, currentOrder.orderId);
+    const cart = await getCart(page, currentCart.cartId);
+    const payments = await getCartPayments(page, currentCart.cartId);
 
-    expect(order.status).toBe('PAID');
+    expect(cart.status).toBe('PAID');
     expect(payments).toHaveLength(1);
-    await expect(page.getByTestId('order-status')).toHaveText('paid');
+    await expect(page.getByTestId('cart-status')).toHaveText('paid');
     await expect(page.getByTestId('duplicate-warning')).toHaveCount(0);
   });
 
-  test('TB-005: 다음 주문 시작 후 새 pending 주문으로 전환된다', async ({ page }) => {
+  test('TB-005: next cart rotates idempotency scope', async ({ page }) => {
     const paymentKeys: string[] = [];
     page.on('request', (request) => {
       if (request.method() === 'POST' && request.url().includes('/api/payments')) {
@@ -93,19 +93,19 @@ test.describe('고급 멱등성 검증', () => {
       }
     });
 
-    const firstOrder = await getCurrentOrder(page);
+    const firstCart = await getCurrentCart(page);
     await page.getByTestId('pay-button').click();
-    await waitForOrderPaid(page, firstOrder.orderId);
+    await waitForCartPaid(page, firstCart.cartId);
 
-    await expect(page.getByTestId('new-order-button')).toBeEnabled();
-    await humanClick(page, page.getByTestId('new-order-button'));
+    await expect(page.getByTestId('new-cart-button')).toBeEnabled();
+    await humanClick(page, page.getByTestId('new-cart-button'));
 
-    const secondOrder = await getCurrentOrder(page);
-    expect(secondOrder.orderId).not.toBe(firstOrder.orderId);
-    await expect(page.getByTestId('order-status')).toHaveText('pending');
+    const secondCart = await getCurrentCart(page);
+    expect(secondCart.cartId).not.toBe(firstCart.cartId);
+    await expect(page.getByTestId('cart-status')).toHaveText('pending');
 
     await page.getByTestId('pay-button').click();
-    await waitForOrderPaid(page, secondOrder.orderId);
+    await waitForCartPaid(page, secondCart.cartId);
 
     expect(paymentKeys).toHaveLength(2);
     expect(paymentKeys[0]).not.toBe(paymentKeys[1]);

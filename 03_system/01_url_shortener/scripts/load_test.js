@@ -14,7 +14,7 @@ export const options = {
   },
 };
 
-const BASE_URL = __ENV.BASE_URL || 'http://host.docker.internal:8000';
+const BASE_URL = __ENV.BASE_URL || 'http://3.34.252.85:8000';
 
 export default function () {
   const url = `${BASE_URL}/api/v1/data/shorten`;
@@ -41,7 +41,10 @@ export default function () {
 
   // 2. Get (Redirect) 10 times → 1:10 비율 구현
   for (let i = 0; i < 10; i++) {
-    const resGet = http.get(`${BASE_URL}/api/v1/${shortUrl}`, { redirects: 0 });
+    const resGet = http.get(`${BASE_URL}/api/v1/${shortUrl}`, { 
+      redirects: 0,
+      tags: { name: 'GET /:shortUrl' } 
+    });
     check(resGet, {
       'Redirect status must be 301 or 302': (r) => r.status === 301 || r.status === 302,
     });

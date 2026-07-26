@@ -15,7 +15,7 @@ public class MockPgService implements PgGateway {
     }
 
     @Override
-    public PgApprovalResult approve(String orderId, long amount) {
+    public PgApprovalResult approve(String cartId, long amount) {
         sleep(pgDelayMs);
         return new PgApprovalResult("pg-" + UUID.randomUUID(), java.time.Instant.now());
     }

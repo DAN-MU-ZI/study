@@ -23,7 +23,6 @@ public class IdempotencyStore {
     private static final String LOCK_PREFIX = "idempotency:lock:";
     private static final String RESULT_PREFIX = "idempotency:result:";
     private static final String CHANNEL_PREFIX = "idempotency:done:";
-    private static final String ORDER_SCOPE = "order:";
     private static final RedisScript<Long> UNLOCK_SCRIPT = createUnlockScript();
 
     private final StringRedisTemplate redisTemplate;
@@ -40,53 +39,49 @@ public class IdempotencyStore {
         this.objectMapper = objectMapper;
     }
 
-    public String lock(String customerId, String key) {
-        return lockByScope(customerId, ORDER_SCOPE + key);
+    public String lock(String cartId) {
+        return lockByScope(cartId);
     }
 
-    public void saveSuccess(String customerId, String key, PaymentDto.Request request, PaymentDto.Response response) {
-        saveRecordByScope(customerId, ORDER_SCOPE + key, IdempotencyRecord.success(request, response));
+    public void saveSuccess(String cartId, PaymentDto.Request request, PaymentDto.Response response) {
+        saveRecordByScope(cartId, IdempotencyRecord.success(request, response));
     }
 
-    public void saveProcessing(String customerId, String key, PaymentDto.Request request) {
-        saveRecordByScope(customerId, ORDER_SCOPE + key, IdempotencyRecord.processing(request));
+    public void saveProcessing(String cartId, PaymentDto.Request request) {
+        saveRecordByScope(cartId, IdempotencyRecord.processing(request));
     }
 
-    public void saveFailure(String customerId, String key, PaymentDto.Request request, int statusCode, String message) {
-        saveRecordByScope(customerId, ORDER_SCOPE + key, IdempotencyRecord.failure(request, new FailureRecord(statusCode, message)));
+    public void saveFailure(String cartId, PaymentDto.Request request, int statusCode, String message) {
+        saveRecordByScope(cartId, IdempotencyRecord.failure(request, new FailureRecord(statusCode, message)));
     }
 
-    public void notifyComplete(String customerId, String key) {
-        notifyCompleteByScope(customerId, ORDER_SCOPE + key);
+    public void notifyComplete(String cartId) {
+        notifyCompleteByScope(cartId);
     }
 
-    public IdempotencyRecord getRecord(String customerId, String key) {
-        return getRecordByScope(customerId, ORDER_SCOPE + key);
+    public IdempotencyRecord getRecord(String cartId) {
+        return getRecordByScope(cartId);
     }
 
-    public IdempotencyRecord waitForResult(String customerId, String key, long timeoutMs) {
-        return waitForResultByScope(customerId, ORDER_SCOPE + key, timeoutMs);
+    public IdempotencyRecord waitForResult(String cartId, long timeoutMs) {
+        return waitForResultByScope(cartId, timeoutMs);
     }
 
-    public void unlock(String customerId, String key, String ownerToken) {
-        unlockByScope(customerId, ORDER_SCOPE + key, ownerToken);
+    public void unlock(String cartId, String ownerToken) {
+        unlockByScope(cartId, ownerToken);
     }
 
-    private String lockByScope(String customerId, String scopeKey) {
-        String redisKey = buildKey(LOCK_PREFIX, customerId, scopeKey);
-        String ownerToken = UUID.randomUUID().toString();
-        Boolean success = redisTemplate.opsForValue().setIfAbsent(redisKey, ownerToken, Duration.ofMinutes(1));
-        return Boolean.TRUE.equals(success) ? ownerToken : null;
+    private String lockByScope(String cartId) {
+        return tryAcquireLock(buildKey(LOCK_PREFIX, cartId));
     }
 
-    private void notifyCompleteByScope(String customerId, String scopeKey) {
-        String channel = buildKey(CHANNEL_PREFIX, customerId, scopeKey);
+    private void notifyCompleteByScope(String cartId) {
+        String channel = buildKey(CHANNEL_PREFIX, cartId);
         redisTemplate.convertAndSend(channel, "DONE");
     }
 
-    private IdempotencyRecord getRecordByScope(String customerId, String scopeKey) {
-        String redisKey = buildKey(RESULT_PREFIX, customerId, scopeKey);
-        String json = redisTemplate.opsForValue().get(redisKey);
+    private IdempotencyRecord getRecordByScope(String cartId) {
+        String json = redisTemplate.opsForValue().get(buildKey(RESULT_PREFIX, cartId));
         if (json == null) {
             return null;
         }
@@ -97,26 +92,26 @@ public class IdempotencyStore {
         }
     }
 
-    private IdempotencyRecord waitForResultByScope(String customerId, String scopeKey, long timeoutMs) {
-        IdempotencyRecord existing = getRecordByScope(customerId, scopeKey);
+    private IdempotencyRecord waitForResultByScope(String cartId, long timeoutMs) {
+        IdempotencyRecord existing = getRecordByScope(cartId);
         if (existing != null && existing.terminal()) {
             return existing;
         }
 
         CountDownLatch latch = new CountDownLatch(1);
-        String channel = buildKey(CHANNEL_PREFIX, customerId, scopeKey);
+        String channel = buildKey(CHANNEL_PREFIX, cartId);
         ChannelTopic topic = new ChannelTopic(channel);
         MessageListener listener = (message, pattern) -> latch.countDown();
 
         listenerContainer.addMessageListener(listener, topic);
         try {
-            existing = getRecordByScope(customerId, scopeKey);
+            existing = getRecordByScope(cartId);
             if (existing != null && existing.terminal()) {
                 return existing;
             }
 
             latch.await(timeoutMs, TimeUnit.MILLISECONDS);
-            return getRecordByScope(customerId, scopeKey);
+            return getRecordByScope(cartId);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return null;
@@ -125,26 +120,30 @@ public class IdempotencyStore {
         }
     }
 
-    private void unlockByScope(String customerId, String scopeKey, String ownerToken) {
+    private void unlockByScope(String cartId, String ownerToken) {
         if (ownerToken == null || ownerToken.isBlank()) {
             return;
         }
-        String redisKey = buildKey(LOCK_PREFIX, customerId, scopeKey);
-        redisTemplate.execute(UNLOCK_SCRIPT, Collections.singletonList(redisKey), ownerToken);
+        redisTemplate.execute(UNLOCK_SCRIPT, Collections.singletonList(buildKey(LOCK_PREFIX, cartId)), ownerToken);
     }
 
-    private void saveRecordByScope(String customerId, String scopeKey, IdempotencyRecord record) {
+    private void saveRecordByScope(String cartId, IdempotencyRecord record) {
         try {
-            String redisKey = buildKey(RESULT_PREFIX, customerId, scopeKey);
             String json = objectMapper.writeValueAsString(record);
-            redisTemplate.opsForValue().set(redisKey, json, Duration.ofHours(24));
+            redisTemplate.opsForValue().set(buildKey(RESULT_PREFIX, cartId), json, Duration.ofHours(24));
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to serialize idempotency record", e);
         }
     }
 
-    private String buildKey(String prefix, String customerId, String idempotencyKey) {
-        return prefix + "{" + customerId + "}:" + idempotencyKey;
+    private String tryAcquireLock(String redisKey) {
+        String ownerToken = UUID.randomUUID().toString();
+        Boolean success = redisTemplate.opsForValue().setIfAbsent(redisKey, ownerToken, Duration.ofMinutes(1));
+        return Boolean.TRUE.equals(success) ? ownerToken : null;
+    }
+
+    private String buildKey(String prefix, String cartId) {
+        return prefix + "cart:" + cartId;
     }
 
     private static RedisScript<Long> createUnlockScript() {

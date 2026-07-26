@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: rate-limit-single
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+
+server:
+  port: 8080
+
+rate-limit:
+  max-requests: 100
+  window-seconds: 60

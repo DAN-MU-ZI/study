@@ -1,8 +1,8 @@
 package com.example.idempotency.service;
 
-import com.example.idempotency.domain.OrderStatus;
+import com.example.idempotency.domain.CartStatus;
 import com.example.idempotency.dto.PaymentDto;
-import com.example.idempotency.store.OrderStore;
+import com.example.idempotency.store.CartStore;
 import com.example.idempotency.store.PaymentStore;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
@@ -20,11 +20,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 class PaymentServiceConcurrencyTest {
 
     @Test
-    void twoConcurrentRequests_onSameOrder_areCollapsedByStoreConstraint() throws Exception {
-        OrderStore orderStore = new OrderStore("1001", "cust-001", 15_000L);
+    void twoConcurrentRequests_onSameCart_areCollapsedByStoreConstraint() throws Exception {
+        CartStore cartStore = new CartStore("1001", "cust-001", 15_000L);
         PaymentStore paymentStore = new PaymentStore();
         MockPgService mockPgService = new MockPgService(500L);
-        PaymentService paymentService = new PaymentService(orderStore, paymentStore, mockPgService);
+        PaymentService paymentService = new PaymentService(cartStore, paymentStore, mockPgService);
 
         ExecutorService executorService = Executors.newFixedThreadPool(2);
         CountDownLatch readyLatch = new CountDownLatch(2);
@@ -62,7 +62,7 @@ class PaymentServiceConcurrencyTest {
             assertThat(exception.getReason()).contains("Duplicate payment attempt");
         });
         assertThat(paymentStore.findAll()).hasSize(1);
-        assertThat(orderStore.get("1001").status()).isEqualTo(OrderStatus.PAID);
+        assertThat(cartStore.get("1001").status()).isEqualTo(CartStatus.PAID);
 
         executorService.shutdownNow();
     }

@@ -5,6 +5,7 @@ import type { Page, TestInfo } from '@playwright/test';
 import type { QaDebugSnapshot } from './fixtures';
 
 const qaTarget = process.env.QA_TARGET ?? '01_advanced';
+const nextEntityButtonTestId = qaTarget === '00_baseline' ? 'new-order-button' : 'new-cart-button';
 
 function stripBom(content: string): string {
   return content.charCodeAt(0) === 0xfeff ? content.slice(1) : content;
@@ -331,7 +332,7 @@ async function getAllTestIdTexts(page: Page, testId: string): Promise<string[]> 
 function getBaselineQaFailureSummary(title: string): string {
   switch (getTestCaseId(title)) {
     case 'TB-002':
-      return '같은 주문에서 중복 승인 방지가 적용되지 않았다.';
+      return '같은 결제 대상에서 중복 승인 방지가 적용되지 않았다.';
     case 'TB-003':
       return '처리 중 상태에서 결제 버튼 비활성화가 적용되지 않았다.';
     default:
@@ -357,8 +358,8 @@ async function buildTb002QaFailureDetails(page: Page) {
   return compactRecord({
     요약:
       paymentCount === 2 && duplicateWarningVisible === true
-        ? '같은 주문에서 결제 이력 2건과 중복 경고가 함께 확인됐다.'
-        : '같은 주문에서 단일 승인으로 수렴하지 않았다.',
+        ? '같은 결제 대상에서 결제 이력 2건과 중복 경고가 함께 확인됐다.'
+        : '같은 결제 대상에서 단일 승인으로 수렴하지 않았다.',
     기대값: {
       결제이력수: 1,
       고유PG거래수: 1,
@@ -372,7 +373,7 @@ async function buildTb003QaFailureDetails(page: Page) {
   const [requestState, payButtonEnabled, newOrderButtonEnabled] = await Promise.all([
     getTestIdText(page, 'request-state'),
     isTestIdEnabled(page, 'pay-button'),
-    isTestIdEnabled(page, 'new-order-button'),
+    isTestIdEnabled(page, nextEntityButtonTestId),
   ]);
 
   const observed = compactRecord({
