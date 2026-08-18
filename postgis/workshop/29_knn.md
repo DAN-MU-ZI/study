@@ -80,7 +80,7 @@ CROSS JOIN LATERAL (
 ) streets;
 ```
 
-`CROSS JOIN LATERAL`가 지하철 테이블에 의해 구동되는 루프의 내부 부분으로 작동하는 방식에 유의하십시오. Subways 테이블의 각 레코드는 측면 하위 쿼리에 한 번에 하나씩 입력되므로 각 Subway 레코드에 대해 가장 가까운 결과를 얻을 수 있습니다.
+`CROSS JOIN LATERAL`은 지하철역 테이블의 각 행을 순회하면서 안쪽의 하위 쿼리를 실행합니다. 각 지하철역 레코드가 `LATERAL` 하위 쿼리에 하나씩 전달되므로 역마다 가장 가까운 결과를 찾을 수 있습니다.
 
 ![이미지](screenshots/knn4.png)
 

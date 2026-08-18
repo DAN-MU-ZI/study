@@ -3,7 +3,7 @@
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/spatial_relationships_exercises.html>](https://postgis.net/workshops/postgis-intro/spatial_relationships_exercises.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
-다음은 지난 섹션에서 본 기능을 상기시켜주는 것입니다. 운동에 유용할 것 같아요!
+다음은 이전 절에서 살펴본 기능입니다. 연습 문제를 풀 때 참고하세요.
 
 - 레코드 집합에 대한 합계를 반환하는 `sum(expression)` 집계
 - 레코드 집합의 크기를 반환하는 `count(expression)` 집계

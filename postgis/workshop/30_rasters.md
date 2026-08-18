@@ -114,7 +114,7 @@ PostGIS 용어에서 **래스터 타일**과 **raster**라는 용어가 어느 �
 
 ## 브라우저에서 래스터 보기
 
-pgAdmin과 psql에는 아직 Postgis 래스터를 볼 수 있는 메커니즘이 없지만 몇 가지 옵션이 있습니다. 작은 래스터의 경우 가장 쉬운 방법은 [PostGIS 래스터 출력에 나열된 <span class="title-ref">ST_AsPNG</span> 또는 <span class="title-ref">ST_AsGDALRaster</span>와 같은 Postgis 래스터 함수가 포함된 배터리를 사용하여 PNG와 같은 웹 친화적인 래스터 형식으로 출력하는 것입니다. 기능](https://postgis.net/docs/RT_reference.html#Raster_Outputs). 래스터가 커짐에 따라 QGIS와 같은 도구를 사용하여 래스터의 멋진 모습을 보거나 `gdal_translate`와 같은 GDAL 명령줄 도구 제품군을 사용하여 다른 래스터 형식으로 내보내는 것이 좋습니다. 하지만 Postgis 래스터는 분석을 위해 만들어졌지, 보기에 좋은 그림을 생성하기 위해 만들어지지 않았다는 점을 기억하세요.
+pgAdmin과 psql은 아직 PostGIS 래스터를 직접 표시하지 못하지만 다른 방법이 있습니다. 작은 래스터는 [PostGIS 래스터 출력 함수](https://postgis.net/docs/RT_reference.html#Raster_Outputs)인 <span class="title-ref">ST_AsPNG</span>나 <span class="title-ref">ST_AsGDALRaster</span>로 PNG 같은 웹용 형식으로 내보내는 방법이 가장 간단합니다. 래스터가 크면 QGIS로 표시하거나 `gdal_translate` 같은 GDAL 명령줄 도구로 다른 래스터 형식으로 변환하는 편이 좋습니다. PostGIS 래스터의 주요 목적은 시각화보다 분석입니다.
 
 한 가지 주의할 점은 기본적으로 모든 다른 래스터 유형 출력이 비활성화되어 있다는 것입니다. 이를 활용하려면 [GDAL 래스터 드라이버 활성화](https://postgis.net/docs/postgis_gdal_enabled_drivers.html)에 설명된 대로 드라이버 전체 또는 하위 집합을 활성화해야 합니다.
 
@@ -195,7 +195,7 @@ SELECT name, ST_Count(rast) As num_pixels, md.*
   FROM rasters, ST_MetaData(rast) AS md;
 ```
 
-뉴욕 항목의 메타데이터를 관찰합니다. 그들은 뉴욕주 평면미터 공간 참조 시스템을 가지고 있습니다. 그들은 또한 같은 규모를 가지고 있습니다. 각 단위가 1x1미터이므로 **Raster** 단어의 너비는 이제 **Hello**보다 넓습니다.
+뉴욕 항목의 메타데이터를 살펴보세요. 두 항목은 모두 뉴욕주 평면 미터 공간 참조 시스템을 사용하며 축척도 같습니다. 각 단위가 1x1미터이므로 **Raster** 단어의 너비는 이제 **Hello**보다 넓습니다.
 
     name         | num_pixels | upperleftx |    upperlefty     | width | height |       scalex       |       scaley        | skewx | skewy | srid  | numbands
     -------------------+------------+------------+-------------------+-------+--------+--------------------+---------------------+-------+-------+-------+----------
@@ -499,7 +499,7 @@ SELECT pp.g1, pp.v1, pp.v2, pp.v3
 ```
 
 > [!NOTE]
-> 이 예에서는 우리가 수행하는 작업을 명시적으로 나타내기를 원했기 때문에 CROSS JOIN LATERAL을 사용했습니다. 이들은 모두 반환 함수로 설정되어 있으므로 CROSS JOIN LATERAL을 간단히 로 대체할 수 있습니다. 다음 예제 세트에서는 a를 사용하겠습니다.
+> 이 예제에서는 수행 과정을 명확하게 보이려고 `CROSS JOIN LATERAL`을 사용했습니다. 해당 함수는 모두 집합을 반환하므로 `CROSS JOIN LATERAL`을 쉼표(`,`)로 바꿔도 됩니다. 다음 예제부터는 쉼표를 사용하겠습니다.
 
 ### ST_DumpAsPolygons를 사용하여 다각형 덤프
 
@@ -741,7 +741,7 @@ SELECT g.geom, ST_Value(r.rast, g.geom) AS elev
 
 `ST_Intersection`를 사용하여 두 도형의 교차점을 계산할 수 있는 것처럼 [raster ST_Intersection](https://postgis.net/docs/RT_ST_Intersection.html)을 사용하여 두 래스터 또는 래스터와 도형의 교차점을 계산할 수 있습니다.
 
-이 짐승에게서 얻는 것은 두 가지 종류입니다.
+이 쿼리에서는 두 종류의 결과를 얻습니다.
 
 - 래스터를 사용하여 형상을 교차하면 <span class="title-ref">geomval</span> 자손 세트가 생성됩니다. 아마도 하나일 수도 있지만 대부분은 여럿입니다.
 - 2개의 래스터를 교차하면 단일 <span class="title-ref">raster</span>가 반환됩니다.
@@ -777,7 +777,7 @@ SELECT ST_Intersection(r1.rast, 1, r2.rast, 1, 'BAND1')
         rasters AS r2 ON ST_Intersects(r1.rast,1, r2.rast, 1);
 ```
 
-우리가 얻는 것은 NULLL이 포함된 두 행이며, PostgreSQL이 알림을 표시하도록 설정한 경우 다음과 같은 내용이 표시됩니다.
+결과는 `NULL`이 들어 있는 두 행입니다. PostgreSQL에서 알림을 표시하도록 설정했다면 다음과 같은 내용도 나타납니다.
 
 **주의사항: 제공된 두 래스터의 정렬이 동일하지 않습니다. NULL 반환**
 

@@ -93,7 +93,7 @@ SELECT ST_AsText(ST_Intersection(
 
 ![image](geometry_returning/union.jpg)
 
-- `ST_Union([geometry])`: 일련의 형상을 취하고 전체 그룹에 대해 병합된 형상을 반환하는 집계 버전입니다. 집계 ST_Union을 `GROUP BY` SQL 문과 함께 사용하여 기본 기하학의 신중하게 병합된 하위 집합을 생성할 수 있습니다. 그것은 매우 강력합니다.
+- `ST_Union([geometry])`: 여러 도형을 받아 전체를 하나로 합친 도형을 반환하는 집계 함수입니다. `GROUP BY`와 함께 사용하면 그룹별로 도형을 병합할 수 있어 매우 유용합니다.
 
 `ST_Union` 집계의 예로 `nyc_census_blocks` 테이블을 고려해보세요. 인구 조사 지역은 작은 지역에서 더 큰 지역을 구성할 수 있도록 세심하게 구성되었습니다. 따라서 각 구역을 형성하는 블록을 병합하여 인구 조사 구역 지도를 만들 수 있습니다(나중에 `creatingtractstable`에서 수행한 것처럼). 또는 각 카운티에 속하는 블록을 병합하여 카운티 지도를 만들 수 있습니다.
 

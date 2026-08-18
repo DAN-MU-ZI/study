@@ -3,7 +3,7 @@
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/geography_exercises.html>](https://postgis.net/workshops/postgis-intro/geography_exercises.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
-지금까지 본 모든 기능을 상기시켜 보겠습니다. 운동에 유용할 것 같아요!
+지금까지 살펴본 기능을 다시 정리해 보겠습니다. 연습 문제를 풀 때 참고하세요.
 
 - `Sum(number)`는 결과 집합의 모든 숫자를 더합니다.
 - `ST_GeogFromText(text)`는 지리를 반환합니다.
