@@ -106,25 +106,6 @@
       North Sutton Area | 68435.13283772678
       East Village      | 50404.48341332535
 
-------------------------------------------------------------------------
-
-<details markdown="1">
-<summary><strong>기존 로컬 문서 보존본</strong> — 로컬 실습 확장·요약 내용</summary>
-
-```sql
-SELECT
-  n.boroname,
-  COUNT(s.name) AS num_stations
-FROM nyc_neighborhoods n
-JOIN nyc_subway_stations s
-  ON ST_Contains(n.geom, s.geom)
-GROUP BY n.boroname
-ORDER BY num_stations DESC;
-```
-
-**결과**: Brooklyn (173개), Manhattan (149개), Queens (132개), Bronx (70개), Staten Island (0개)
-
-</details>
 
 ---
 

@@ -111,23 +111,6 @@
     );
   ```
 
-------------------------------------------------------------------------
-
-<details markdown="1">
-<summary><strong>기존 로컬 문서 보존본</strong> — 로컬 실습 확장·요약 내용</summary>
-
-```sql
-SELECT
-  name,
-  ST_X(ST_Transform(geom, 4326)) AS longitude,
-  ST_Y(ST_Transform(geom, 4326)) AS latitude
-FROM nyc_subway_stations
-WHERE name = 'Broad St';
-```
-
-**결과**: 경도 약 `-74.011...`, 위도 약 `40.707...`
-
-</details>
 
 ---
 

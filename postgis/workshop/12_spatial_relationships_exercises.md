@@ -92,20 +92,6 @@
 
       1438
 
-------------------------------------------------------------------------
-
-<details markdown="1">
-<summary><strong>기존 로컬 문서 보존본</strong> — 로컬 실습 확장·요약 내용</summary>
-
-```sql
-SELECT DISTINCT str.name
-FROM nyc_streets str, nyc_subway_stations sub
-WHERE sub.name = 'Broad St'
-  AND ST_DWithin(str.geom, sub.geom, 100)
-ORDER BY str.name;
-```
-
-</details>
 
 ---
 

@@ -174,20 +174,6 @@
   > [!NOTE]
   > `ORDER BY length DESC` 절은 결과를 길이별로 내림차순으로 정렬합니다. 결과적으로 가장 널리 사용되는 유형이 목록의 첫 번째 항목이 됩니다.
 
-------------------------------------------------------------------------
-
-<details markdown="1">
-<summary><strong>기존 로컬 문서 보존본</strong> — 로컬 실습 확장·요약 내용</summary>
-
-```sql
-SELECT ST_Area(geom) AS area_sq_meters
-FROM nyc_neighborhoods
-WHERE name = 'Upper West Side';
-```
-
-**결과**: 약 `4842188` ㎡ (약 4.84 ㎢)
-
-</details>
 
 ---
 

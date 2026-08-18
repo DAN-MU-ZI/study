@@ -97,19 +97,6 @@
 
       180990.964207547
 
-------------------------------------------------------------------------
-
-<details markdown="1">
-<summary><strong>기존 로컬 문서 보존본</strong> — 로컬 실습 확장·요약 내용</summary>
-
-```sql
-SELECT ST_Area(ST_Union(ST_Buffer(geom, 500))) / 1000000.0 AS subway_coverage_sq_km
-FROM nyc_subway_stations;
-```
-
-**결과**: 약 `235.8` ㎢
-
-</details>
 
 ---
 

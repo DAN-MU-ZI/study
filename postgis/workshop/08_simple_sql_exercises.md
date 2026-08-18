@@ -113,20 +113,6 @@
 
 [sum(expression)](http://www.postgresql.org/docs/current/static/functions-aggregate.html#FUNCTIONS-AGGREGATE-TABLE): 레코드 집합의 레코드 합계를 반환하는 PostgreSQL 집계 함수입니다.
 
-------------------------------------------------------------------------
-
-<details markdown="1">
-<summary><strong>기존 로컬 문서 보존본</strong> — 로컬 실습 확장·요약 내용</summary>
-
-```sql
-SELECT boroname
-FROM nyc_neighborhoods
-WHERE name = 'West Village';
-```
-
-**결과**: `Manhattan`
-
-</details>
 
 ---
 
