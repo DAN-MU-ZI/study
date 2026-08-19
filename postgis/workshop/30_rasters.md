@@ -73,18 +73,18 @@ apt install postgis
 
 PostGIS 명령줄 도구를 설치해야 합니다. 추가 버전의 PostgreSQL도 설치할 수 있습니다. `pg_lsclusters` 명령을 사용하여 Debian/Ubuntu의 클러스터 목록을 확인하고 `pg_dropcluster` 명령을 사용하여 삭제할 수 있습니다.
 
-이 연습과 이후 연습에서는 [PG Raster Workshop Dataset <https://postgis.net/stuff/workshop-data/postgis_raster_workshop.zip>](https://postgis.net/stuff/workshop-data/postgis_raster_workshop.zip) 파일에 있는 <span class="title-ref">nyc_dem.tif</span>를 사용합니다. 일부 기하학/래스터 예제의 경우 이전 장에서 로드된 NYC 데이터도 사용할 것입니다. tif를 로드하는 대신 `pg_restore` 명령줄 도구 또는 pgAdmin **Restore** 메뉴를 사용하여 데이터베이스의 zip 파일에 포함된 <span class="title-ref">nyc_dem.backup</span>를 복원할 수 있습니다.
+이번 실습과 이어지는 실습에서는 [PG Raster Workshop Dataset](https://postgis.net/stuff/workshop-data/postgis_raster_workshop.zip)에 포함된 <span class="title-ref">nyc_dem.tif</span>를 사용합니다. 일부 지오메트리·래스터 예제에서는 앞 장에서 불러온 NYC 데이터도 사용합니다. TIFF 파일을 직접 불러오는 대신, 압축 파일에 포함된 <span class="title-ref">nyc_dem.backup</span>을 `pg_restore` 명령줄 도구나 pgAdmin의 **Restore** 메뉴로 복원해도 됩니다.
 
 > [!NOTE]
 > 이 래스터 데이터는 건물과 물이 제거된 해수면을 기준으로 한 고도를 나타내는 3GB DEM tif인 [NYC DEM 1-foot Integer](https://data.cityofnewyork.us/City-Government/1-foot-Digital-Elevation-Model-DEM-/dpc8-z3jc)에서 가져온 것입니다. 그런 다음 더 낮은 해상도 버전을 만들었습니다.
 
-`raster2pgsql` 도구는 ESRI 모양 파일을 PostGIS 기하학/지리 테이블에 로드하는 대신 GDAL 지원 래스터 형식을 래스터 테이블에 로드한다는 점을 제외하면 `shp2gpsql`와 유사합니다. `shp2pgsql`와 마찬가지로 소스의 SRID(공간 참조 ID)를 전달할 수 있습니다. `shp2pgsql`와 달리 소스 데이터에 적합한 메타데이터가 있는 경우 소스 데이터의 공간 참조 시스템을 추론할 수 있습니다.
+`raster2pgsql`은 `shp2pgsql`과 비슷하지만, ESRI 셰이프파일을 PostGIS 지오메트리·지오그래피 테이블에 넣는 대신 GDAL이 지원하는 래스터 형식을 래스터 테이블에 불러옵니다. `shp2pgsql`처럼 소스 데이터의 SRID를 지정할 수 있으며, 적절한 메타데이터가 있으면 `shp2pgsql`과 달리 공간 참조 체계를 자동으로 추론할 수도 있습니다.
 
 제공되는 모든 가능한 스위치에 대한 전체 정보는 [raster2pgsql 옵션](https://postgis.net/docs/using_raster_dataman.html#RT_Loading_Rasters)을 참조하세요.
 
 우리가 다루지 않을 다른 주목할만한 `raster2pgsql` 옵션은 다음과 같습니다:
 
-- 소스의 SRID를 표시하는 기능. 대신, 우리는 raster2pgsql 추측 기술을 사용할 것입니다.
+- 소스 데이터의 SRID를 직접 지정하는 옵션. 여기서는 `raster2pgsql`이 SRID를 자동으로 추론하도록 둡니다.
 - <span class="title-ref">nodata</span> 값을 설정하는 기능, 지정되지 않은 경우 raster2pgsql은 파일에서 추론을 시도합니다.
 - 데이터베이스 외부 래스터를 로드하는 기능.
 
@@ -365,7 +365,7 @@ SELECT ST_Union(rast ORDER BY name DESC)
 
 `FIRST` 유니온 유형은 `LAST`의 반대 유형입니다.
 
-그러나 경우에 따라 **LAST**가 올바른 작업이 아닐 수도 있습니다. 래스터가 두 개의 서로 다른 장치에서 얻은 두 개의 서로 다른 관측 세트를 표현한다고 가정해 보겠습니다. 이러한 장치는 동일한 것을 측정하므로 경로를 교차할 때 어느 것이 올바른지 확신할 수 없으므로 대신 결과의 <span class="title-ref">MEAN</span>를 사용하고 싶습니다. 우리는 이렇게 할 것입니다:
+그러나 경우에 따라 **LAST**가 적절하지 않을 수 있습니다. 두 래스터가 서로 다른 장치에서 관측한 결과이고 두 장치가 같은 대상을 측정했다고 가정해 보겠습니다. 래스터가 겹치는 영역에서 어느 값이 더 정확한지 알 수 없다면 <span class="title-ref">MEAN</span>으로 평균을 구할 수 있습니다.
 
 ```sql
 SELECT ST_Union(rast, 'MEAN')
@@ -381,7 +381,7 @@ SELECT ST_Union(rast, 'MEAN')
 
 기하학의 경우 기하학은 벡터이므로 그 외에는 값이 없으므로 두 벡터가 교차할 때 결합하는 방법에 실제로 모호함이 없습니다.
 
-우리가 설명한 래스터 `ST_Union`의 또 다른 기능은 모든 밴드를 반환해야 하는지 아니면 일부 밴드만 반환해야 하는지에 대한 아이디어입니다. 통합할 밴드를 지정하지 않으면 `ST_Union`는 동일한 밴드 번호를 결합하고 `LAST` 통합 전략을 사용합니다. 밴드가 여러 개라면 이 방법을 사용하지 않을 수도 있습니다. 아마도 당신은 두 번째 밴드인 유니온만 원할 것입니다. 이 경우 녹색 밴드와 픽셀 값의 개수를 원합니다.
+래스터 `ST_Union`에서는 전체 밴드를 반환할지 일부 밴드만 반환할지도 지정할 수 있습니다. 결합할 밴드를 지정하지 않으면 같은 번호의 밴드끼리 `LAST` 전략으로 결합합니다. 다중 밴드 래스터에서는 원하는 결과가 아닐 수 있습니다. 다음 예에서는 두 번째 밴드인 녹색 밴드만 결합하고 픽셀값의 개수를 계산합니다.
 
 ```sql
 SELECT ST_BandPixelType(ST_Union(rast, 2, 'COUNT'))
@@ -572,7 +572,7 @@ SELECT (ST_SummaryStatsAgg(rast, 1, true, 1)).* AS sa
 
 ### ST_히스토그램
 
-일반적으로 전체 테이블에 대한 통계를 원하지 않고 대신 특정 영역에 대한 통계만 원할 것입니다. 이 경우 오랜 친구인 `ST_Intersects` 및 `ST_Clip`를 고용하는 것이 좋습니다. 집계 버전이 없는 래스터 통계 기능도 필요한 경우 `ST_Union`를 가지고 다니는 것이 좋습니다.
+일반적으로는 테이블 전체보다 특정 영역의 통계가 필요합니다. 이때 `ST_Intersects`와 `ST_Clip`으로 대상 영역을 제한할 수 있습니다. 집계형이 없는 래스터 통계 함수를 사용해야 한다면 `ST_Union`으로 래스터를 먼저 결합합니다.
 
 다음 예에서는 동등한 집계가 없는 다른 통계 함수 [ST_Histogram](https://postgis.net/docs/RT_ST_Histogram.html)를 사용할 것이며, 이 특정 변형의 경우 집합 반환 함수입니다. 이전 예제와 동일한 관심 영역을 사용하고 있지만 NY 주 평면 미터 기하학을 NYC 주 평면 피트 래스터로 변환하려면 기하학 `ST_Transform`도 사용해야 합니다. 래스터 대신 지오메트리를 변환하는 것이 거의 항상 더 성능이 좋으며 지오메트리가 단일인 경우에는 확실히 더 좋습니다.
 
@@ -637,7 +637,7 @@ pgAdmin에서 보면 다음과 같습니다.
 
 조금 느리기는 하지만 더 나은 접근 방식은 [ST_MakeEmptyCoverage](https://postgis.net/docs/RT_ST_MakeEmptyCoverage.html)를 사용하여 처음부터 자신만의 커버리지 타일 구조를 정의한 다음 각 새 타일에 대해 교차하는 타일을 찾고 이를 ST_Union한 다음 <span class="title-ref">ST_Transform(ref, ST_Union...)</span>를 사용하여 각 타일을 생성하는 것입니다.
 
-이를 위해 우리는 이전에 배운 꽤 많은 기능을 사용할 것입니다.
+이를 위해 앞에서 배운 여러 함수를 사용합니다.
 
 ```sql
 DROP TABLE IF EXISTS nyc_dem_26918;
@@ -691,7 +691,7 @@ ANALYZE nyc_dem_26918;
 
 ### ST_CreateOverview를 사용하여 개요 테이블 만들기
 
-원래 데이터 세트와 마찬가지로 일부 작업의 성능을 높이기 위해 개요 테이블을 갖는 것이 유용할 것입니다. [ST_CreateOverview](https://postgis.net/docs/RT_CreateOverview.html)는 이러한 목적에 적합한 함수입니다. raster2pgsql 로드 중에 개요 생성을 무시했거나 더 많은 개요가 필요하다고 결정한 경우에도 `ST_CreateOverview`를 사용하여 개요를 생성할 수 있습니다.
+원본 데이터셋과 마찬가지로 오버뷰 테이블을 만들면 일부 작업의 성능을 높일 수 있습니다. [ST_CreateOverview](https://postgis.net/docs/RT_CreateOverview.html)는 이를 위한 함수입니다. `raster2pgsql`로 데이터를 불러올 때 오버뷰 생성을 생략했거나 오버뷰가 더 필요할 때 사용할 수 있습니다.
 
 이 코드를 사용하여 원본에서 했던 것처럼 레벨 2 및 3 개요를 생성하겠습니다.
 
@@ -702,7 +702,7 @@ SELECT ST_CreateOverview('nyc_dem_26918'::regclass, 'rast', 3);
 
 이 프로세스는 슬프게도 시간이 걸리며 행이 많을수록 시간이 더 오래 걸리므로 인내심을 가지십시오. 이 데이터세트의 경우 개요 요소 <span class="title-ref">2</span>의 경우 약 3~5분이 걸렸고 개요 요소 <span class="title-ref">3</span>의 경우 1분이 걸렸습니다.
 
-`ST_CreateOverView` 함수는 또한 <span class="title-ref">raster_columns</span> 및 <span class="title-ref">raster_overviews</span> 카탈로그에 열이 전체 세부 정보와 함께 표시되도록 필요한 제약 조건을 추가합니다. 그러나 인덱스를 추가하지 않으며 제거 열도 추가하지 않습니다. 편집할 기본 키가 필요하지 않은 한,rid 열은 필요하지 않을 것입니다. 아마도 다음을 사용하여 생성할 수 있는 인덱스가 필요할 것입니다.
+`ST_CreateOverview`는 <span class="title-ref">raster_columns</span>와 <span class="title-ref">raster_overviews</span> 카탈로그에 전체 정보가 표시되도록 필요한 제약 조건도 추가합니다. 하지만 인덱스와 `rid` 열은 만들지 않습니다. 편집용 기본 키가 필요하지 않다면 `rid` 열은 없어도 되지만, 다음과 같이 인덱스는 추가하는 편이 좋습니다.
 
 ```sql
 CREATE INDEX ix_o_2_nyc_dem_26918_st_convexhull_gist
@@ -819,7 +819,7 @@ count  |  sum  |      mean       |      stddev      | min | max
 
 지도 대수학은 픽셀 값에 대해 수학을 수행할 수 있다는 아이디어입니다. 앞서 다룬 `ST_Union` 및 `ST_Intersection` 함수는 맵 대수학의 특별한 빠른 사례입니다. 그런 다음 [ST_MapAlgebra](https://postgis.net/docs/RT_ST_MapAlgebra.html) 함수 계열을 사용하면 자신만의 미친 수학을 정의할 수 있지만 성능이 저하됩니다.
 
-사람들은 `ST_MapAlgebra`로 뛰어드는 습관이 있습니다. 아마도 그 이름이 너무 멋지고 정교하게 들리기 때문일 것입니다. 누가 친구들에게 말하고 싶지 않겠습니까? *저는 ST_MapAlgebra라는 함수를 사용하고 있습니다.* 조언하자면, 샷건을 꺼내기 전에 다른 함수를 탐색해 보세요. 당신의 삶은 더 단순해지고, 성능은 100배 향상되며, 코드는 더 짧아질 것입니다.
+`ST_MapAlgebra`라는 이름이 멋지고 정교하게 들려 곧바로 이 함수를 선택하기 쉽습니다. 하지만 복잡한 도구부터 꺼내기 전에 다른 함수를 먼저 살펴보는 것이 좋습니다. 구현은 더 단순해지고 코드는 짧아지며 성능은 100배까지 좋아질 수 있습니다.
 
 <span class="title-ref">ST_MapAlgebra</span>를 소개하기 전에 <span class="title-ref">Map Algebra</span> 함수 제품군에 적합하고 일반적으로 <span class="title-ref">ST_MapAlgebra</span>보다 더 나은 성능을 갖는 다른 함수를 살펴보겠습니다.
 

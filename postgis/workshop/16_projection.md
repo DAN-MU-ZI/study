@@ -3,9 +3,9 @@
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/projection.html>](https://postgis.net/workshops/postgis-intro/projection.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
-지구는 평평하지 않고, 평평한 종이 지도(또는 컴퓨터 화면)에 간단히 표시할 수 있는 방법도 없기 때문에 사람들은 각각 장단점이 있는 온갖 종류의 독창적인 해결책을 생각해 냈습니다. 일부 투영은 영역을 유지하므로 모든 객체는 서로 상대적인 크기를 갖습니다. 다른 투영은 Mercator 투영과 같은 각도(등각)를 유지합니다. 일부 프로젝션에서는 여러 매개변수에 대한 왜곡이 거의 없는 좋은 중간 혼합을 찾으려고 합니다. 모든 투영의 공통점은 (구형) 세계를 평면 데카르트 좌표계로 변환한다는 점이며, 어떤 투영을 선택할지는 데이터를 어떻게 사용할지에 따라 달라집니다.
+지구는 평평하지 않으므로 종이 지도나 컴퓨터 화면에 왜곡 없이 옮길 수 없습니다. 이 때문에 저마다 장단점이 있는 다양한 투영법이 만들어졌습니다. 어떤 투영은 면적을 보존하여 객체의 상대적 크기를 유지하고, 메르카토르 투영처럼 각도를 보존하는 투영도 있습니다. 여러 종류의 왜곡을 적절히 절충하는 투영도 있습니다. 모든 투영은 구형에 가까운 지구를 평면 데카르트 좌표계로 변환하며, 적합한 투영은 데이터의 용도에 따라 달라집니다.
 
-NYC 데이터를 불러올 때 이미 투영을 접했습니다(번거로웠던 SRID 26918을 기억하세요). 때로는 공간 참조 시스템 간에 데이터를 변환하고 재투영해야 합니다. PostGIS는 `ST_Transform(geometry, srid)` 함수로 데이터의 투영을 변경합니다. 도형의 공간 참조 식별자는 `ST_SRID(geometry)`와 `ST_SetSRID(geometry, srid)` 함수로 관리합니다.
+NYC 데이터를 불러올 때 이미 투영을 접했습니다. 앞에서 혼동하기 쉬운 SRID 26918을 살펴본 것을 기억하세요. 때로는 서로 다른 공간 참조 체계 사이에서 데이터를 변환, 즉 재투영해야 합니다. PostGIS에서는 `ST_Transform(geometry, srid)`으로 데이터를 재투영하고, `ST_SRID(geometry)`와 `ST_SetSRID(geometry, srid)`로 지오메트리의 SRID를 관리합니다.
 
 `ST_SRID` 함수를 사용하여 데이터의 SRID를 확인할 수 있습니다.
 
@@ -15,7 +15,7 @@ SELECT ST_SRID(geom) FROM nyc_streets LIMIT 1;
 
     26918
 
-그리고 "26918"의 정의는 무엇입니까? "`loading data section <loading_data>`"에서 본 것처럼 정의는 `spatial_ref_sys` 테이블에 포함되어 있습니다. 실제로 **two** 정의가 있습니다. "잘 알려진 텍스트"(`WKT`) 정의는 `srtext` 열에 있고 `proj4text` 열에는 "proj.4" 형식의 두 번째 정의가 있습니다.
+그렇다면 "26918"은 어떻게 정의되어 있을까요? [공간 데이터 불러오기](05_loading_data.md)에서 보았듯이 정의는 `spatial_ref_sys` 테이블에 들어 있습니다. 여기에는 **두 가지** 정의가 있습니다. WKT(Well-Known Text) 정의는 `srtext` 열에, "proj.4" 형식의 정의는 `proj4text` 열에 저장됩니다.
 
 ```sql
 SELECT * FROM spatial_ref_sys WHERE srid = 26918;
@@ -23,11 +23,11 @@ SELECT * FROM spatial_ref_sys WHERE srid = 26918;
 
 PostGIS 재투영 엔진은 `spatial_ref_sys` 테이블에서 최상의 투영을 찾으려고 시도합니다.
 
-- **auth_name / auth_srid** proj가 내부 카탈로그에서 유효한 "권한 이름"과 "권한 srid"를 찾을 수 있으면 이를 사용하여 프로젝션 정의를 생성합니다.
-- **srtext** proj가 `srtext`에서 정의 개체를 구문 분석하고 형성할 수 있으면 이를 사용합니다.
-- **proj4text** 마지막으로 proj는 `proj4text` 처리를 시도합니다.
+- **auth_name / auth_srid**: PROJ가 내부 카탈로그에서 유효한 기관명과 기관 SRID를 찾으면 이를 이용해 투영 정의를 생성합니다.
+- **srtext**: PROJ가 `srtext`의 정의를 해석할 수 있으면 이를 사용합니다.
+- **proj4text**: 마지막으로 PROJ는 `proj4text`를 해석합니다.
 
-이 모든 중복성은 PostGIS에서 새 투영을 생성하는 데 필요한 모든 것이 유효한 `srtext` 문자열 또는 `proj4text` 문자열이라는 것을 의미합니다. 모든 공통 기관 이름/코드 쌍은 기본적으로 테이블에 이미 로드되어 있습니다.
+이처럼 여러 정의 방식을 지원하므로 유효한 `srtext` 또는 `proj4text` 문자열만 있으면 PostGIS에 새 투영을 추가할 수 있습니다. 널리 쓰이는 기관명과 코드의 조합은 기본적으로 테이블에 등록되어 있습니다.
 
 사용자 정의 투영을 생성할 때 선택 사항이 있는 경우 `srtext` 열을 작성하세요. 해당 열은 [GeoServer](http://geoserver.org), [QGIS](https://qgis.org), [FME](http://www.safe.com/) 등과 같은 외부 프로그램에서도 사용되기 때문입니다.
 

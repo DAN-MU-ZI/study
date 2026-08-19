@@ -3,10 +3,10 @@
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/joins_exercises.html>](https://postgis.net/workshops/postgis-intro/joins_exercises.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
-다음은 우리가 본 기능 중 일부를 상기시켜주는 것입니다. 힌트: 연습에 유용할 것입니다!
+앞에서 살펴본 함수 가운데 이번 실습에 유용한 것들을 정리하면 다음과 같습니다.
 
-- `sum(expression)`: 레코드 세트에 대한 합계를 반환하기 위한 집계
-- `count(expression)`: 레코드 세트의 크기를 반환하기 위해 집계
+- `sum(expression)`: 레코드 집합에 있는 값의 합계를 반환하는 집계 함수
+- `count(expression)`: 레코드 집합의 레코드 수를 반환하는 집계 함수
 - `ST_Area(geometry)`는 다각형의 면적을 반환합니다.
 - `ST_AsText(geometry)`는 WKT `text`를 반환합니다.
 - `ST_Contains(geometry A, geometry B)`는 기하학 A에 기하학 B가 포함된 경우 true를 반환합니다.

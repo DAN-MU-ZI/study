@@ -122,7 +122,7 @@ WHERE ST_Intersects(geom, ST_GeomFromText('POINT(583571 4506714)',26918));
 
 매우 일반적인 GIS 질문은 "이 다른 항목의 거리 X 내에 있는 모든 항목을 찾는 것"입니다.
 
-`ST_Distance(geometry A, geometry B)`는 두 기하학 사이의 *최단* 거리를 계산하고 이를 부동 소수점으로 반환합니다. 이는 실제로 객체 사이의 거리를 다시 보고하는 데 유용합니다.
+`ST_Distance(geometry A, geometry B)`는 두 지오메트리 사이의 *최단* 거리를 계산하여 부동소수점 값으로 반환합니다. 객체 사이의 실제 거리를 구할 때 유용합니다.
 
 ```sql
 SELECT ST_Distance(
@@ -174,7 +174,7 @@ WHERE ST_DWithin(
 
 [ST_Equals(기하학 A, 기하학 B)](http://postgis.net/docs/ST_Equals.html): 주어진 기하학이 동일한 기하학을 나타내는 경우 true를 반환합니다. 방향성은 무시됩니다.
 
-[ST_Intersects(기하학 A, 기하학 B)](http://postgis.net/docs/ST_Intersects.html): 기하학/지리학이 "공간적으로 교차"하는 경우(공간의 모든 부분 공유) TRUE를 반환하고 그렇지 않은 경우(분리됨) FALSE를 반환합니다.
+[ST_Intersects(geometry A, geometry B)](http://postgis.net/docs/ST_Intersects.html): 두 지오메트리 또는 지오그래피가 공간의 일부를 공유하면 `TRUE`, 서로 분리되어 있으면 `FALSE`를 반환합니다.
 
 [ST_Overlaps(기하학 A, 기하학 B)](http://postgis.net/docs/ST_Overlaps.html): 기하학이 공간을 공유하고 동일한 차원이지만 서로 완전히 포함되지 않은 경우 TRUE를 반환합니다.
 

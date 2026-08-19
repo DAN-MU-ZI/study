@@ -9,7 +9,7 @@
 
 ![image](equality/polygon-table.png)
 
-이러한 다각형은 다음 명령을 사용하여 로드됩니다.
+다음 명령으로 이 다각형들을 불러옵니다.
 
 ```sql
 CREATE TABLE polygons (id integer, name varchar, poly geometry);

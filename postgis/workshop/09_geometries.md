@@ -5,7 +5,7 @@
 
 ## 소개
 
-이전 `section <loading_data>`에서는 다양한 데이터를 로드했습니다. 데이터를 가지고 놀기 전에 몇 가지 간단한 예를 살펴보겠습니다. pgAdmin에서 다시 한 번 **nyc** 데이터베이스를 선택하고 SQL 쿼리 도구를 엽니다. 이 예제 SQL 코드를 pgAdmin SQL 편집기 창에 붙여넣은 다음(기본적으로 있을 수 있는 텍스트 제거) 실행합니다.
+앞의 [공간 데이터 불러오기](05_loading_data.md)에서는 여러 데이터를 데이터베이스에 불러왔습니다. 본격적으로 데이터를 다루기 전에 간단한 예부터 살펴보겠습니다. pgAdmin에서 **nyc** 데이터베이스를 선택하고 SQL 쿼리 도구를 엽니다. 편집기에 기본으로 들어 있는 텍스트가 있다면 지운 뒤 예제 SQL을 붙여넣고 실행합니다.
 
 ```sql
 CREATE TABLE geometries (name varchar, geom geometry);
@@ -29,7 +29,7 @@ SELECT name, ST_AsText(geom) FROM geometries;
 SQL용 단순 기능(`SFSQL`) 사양에 따라 PostGIS는 주어진 데이터베이스에서 사용할 수 있는 도형 유형을 추적하고 보고하기 위한 두 개의 테이블을 제공합니다.
 
 - 첫 번째 테이블 `spatial_ref_sys`는 데이터베이스에 알려진 모든 공간 참조 시스템을 정의하며 나중에 자세히 설명합니다.
-- 두 번째 테이블(실제로는 뷰)인 `geometry_columns`는 모든 "특징"(기하학적 속성이 있는 개체로 정의됨) 목록과 해당 기능에 대한 기본 세부 정보를 제공합니다.
+- 두 번째 항목인 `geometry_columns`는 실제로는 뷰이며, 지오메트리 속성을 가진 모든 공간 피처와 그 기본 정보를 보여 줍니다.
 
 ![image](geometries/table01.png)
 
@@ -58,9 +58,9 @@ SELECT * FROM geometry_columns;
 >   USING ST_SetSRID(geom, 26918);
 > ```
 
-## 실제 객체 표현
+## 실제 공간 객체의 표현
 
-PostGIS 개발을 위한 최초의 지침 표준인 SQL용 단순 기능(`SFSQL`) 사양은 실제 객체가 표현되는 방식을 정의합니다. 연속적인 모양을 취하고 이를 고정된 해상도로 디지털화함으로써 우리는 물체를 무난하게 표현할 수 있습니다. SFSQL은 2차원 표현만 처리했습니다. PostGIS는 이를 3차원 및 4차원 표현을 포함하도록 확장했습니다. 최근에는 SQL-Multimedia Part 3(`SQL/MM`) 사양이 공식적으로 자체 표현을 정의했습니다.
+PostGIS 개발의 초기 지침이 된 Simple Features for SQL(`SFSQL`) 명세는 실제 공간 객체를 표현하는 방법을 정의합니다. 연속된 형태를 일정한 해상도로 디지털화하면 현실의 객체를 근사하여 표현할 수 있습니다. SFSQL은 2차원 표현만 다뤘지만 PostGIS는 이를 3차원과 4차원으로 확장했습니다. 이후 SQL Multimedia Part 3(`SQL/MM`) 명세도 자체 표현 방식을 공식적으로 정의했습니다.
 
 예제 테이블에는 다양한 지오메트리 유형이 혼합되어 있습니다. 기하학 메타데이터를 읽는 함수를 사용하여 각 객체에 대한 일반 정보를 수집할 수 있습니다.
 
@@ -207,7 +207,7 @@ SELECT name, ST_Area(geom)
 - **MultiPolygon**, 폴리곤 모음
 - **GeometryCollection**, 모든 지오메트리의 이종 컬렉션(다른 컬렉션 포함)
 
-컬렉션은 일반 그래픽 소프트웨어보다 GIS 소프트웨어에 더 많이 나타나는 또 다른 개념입니다. 실제 객체를 공간 객체로 직접 모델링하는 데 유용합니다. 예를 들어, 통행권으로 분할된 부지를 모델링하는 방법은 무엇입니까? **MultiPolygon**로서 통행권의 양쪽에 부품이 있습니다.
+컬렉션은 일반 그래픽 소프트웨어보다 GIS에서 더 자주 접하는 개념으로, 현실의 객체를 공간 객체로 직접 모델링할 때 유용합니다. 예를 들어 통행권으로 양분된 필지는 통행권 양쪽의 두 부분을 하나의 **MultiPolygon**으로 표현할 수 있습니다.
 
 ![이미지](screenshots/collection2.png)
 
@@ -362,7 +362,7 @@ SELECT 'SRID=4326;POINT(0 0)'::geometry;
 
 [ST_AsKML](http://postgis.net/docs/ST_AsKML.html): 도형을 KML 요소로 반환합니다. 여러 변형. 기본 버전=2, 기본 정밀도=15.
 
-[ST_AsSVG](http://postgis.net/docs/ST_AsSVG.html): 기하학 또는 지리 객체가 제공된 SVG 경로 데이터의 기하학을 반환합니다.
+[ST_AsSVG](http://postgis.net/docs/ST_AsSVG.html): 지오메트리 또는 지오그래피 객체를 SVG 경로 데이터로 반환합니다.
 
 [ST_ExteriorRing](http://postgis.net/docs/ST_ExteriorRing.html): POLYGON 기하학의 외부 링을 나타내는 행 문자열을 반환합니다. 도형이 다각형이 아닌 경우 NULL을 반환합니다. MULTIPOLYGON에서는 작동하지 않습니다.
 

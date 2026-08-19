@@ -38,7 +38,7 @@ SELECT name FROM nyc_neighborhoods;
 - `UPDATE`, 테이블의 기존 행을 변경합니다.
 - `DELETE`, 테이블에서 행을 제거합니다.
 
-우리는 공간 함수를 사용하여 테이블에 질문하기 위해 거의 독점적으로 `SELECT`로 작업할 것입니다.
+이 워크숍에서는 공간 함수를 이용해 테이블을 조회할 때 대부분 `SELECT` 문을 사용합니다.
 
 ## SELECT 쿼리
 

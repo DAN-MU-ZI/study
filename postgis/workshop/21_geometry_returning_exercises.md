@@ -3,7 +3,7 @@
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/geometry_returning_exercises.html>](https://postgis.net/workshops/postgis-intro/geometry_returning_exercises.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
-다음은 우리가 본 기능 중 일부를 상기시켜주는 것입니다. 힌트: 연습에 유용할 것입니다!
+앞에서 살펴본 함수 가운데 이번 실습에 유용한 것들을 정리하면 다음과 같습니다.
 
 - 레코드 집합에 대한 합계를 반환하는 `sum(expression)` 집계
 - `ST_Area(geometry)`는 형상의 면적을 반환합니다.
@@ -63,7 +63,7 @@
 
       63
 
-- **원점 주변의 한 단위 버퍼 면적은 얼마입니까? 당신이 기대했던 것과 얼마나 다른가요? 왜?**
+- **원점 주위에 반지름 1인 버퍼를 만들면 면적은 얼마입니까? 예상값과 얼마나 다르며, 그 이유는 무엇입니까?**
 
   ```sql
   SELECT ST_Area(ST_Buffer('POINT(0 0)', 1));

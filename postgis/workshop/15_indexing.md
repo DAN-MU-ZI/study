@@ -7,7 +7,7 @@
 
 공간 인덱스는 PostGIS의 가장 큰 자산 중 하나입니다. 이전 예에서 공간 조인을 작성하려면 전체 테이블을 서로 비교해야 합니다. 이는 매우 비용이 많이 들 수 있습니다. 인덱스 없이 각각 10,000개의 레코드로 구성된 두 테이블을 결합하려면 100,000,000번의 비교가 필요합니다. 인덱스를 사용하면 비용이 20,000번의 비교만큼 낮아질 수 있습니다.
 
-데이터 로드 파일에는 이미 모든 테이블에 대한 공간 인덱스가 포함되어 있으므로 인덱스의 효율성을 입증하기 위해 먼저 이를 제거해야 합니다.
+불러온 데이터에는 모든 테이블의 공간 인덱스가 이미 포함되어 있습니다. 인덱스의 효과를 확인하려면 먼저 이 인덱스를 제거해야 합니다.
 
 공간 인덱스를 사용하지 않고 `nyc_census_blocks`를 조회해 보겠습니다.
 
@@ -20,7 +20,7 @@ DROP INDEX nyc_census_blocks_geom_idx;
 > [!NOTE]
 > `DROP INDEX` 문은 데이터베이스 시스템에서 기존 인덱스를 삭제합니다. 자세한 내용은 PostgreSQL [문서](http://www.postgresql.org/docs/current/interactive/sql-dropindex.html)를 참조하세요.
 
-이제 pgAdmin 쿼리 창의 오른쪽 하단에 있는 "Timing" 미터를 확인하고 다음을 실행하세요. 우리의 쿼리는 "B"로 시작하는 지하철 정류장이 포함된 블록을 식별하기 위해 모든 단일 인구 조사 블록을 검색합니다.
+pgAdmin 쿼리 창 오른쪽 아래의 "Timing" 표시를 확인하고 다음 쿼리를 실행하세요. 이 쿼리는 모든 인구조사 블록을 검색하여 이름이 "B"로 시작하는 지하철역을 포함한 블록을 찾습니다.
 
 ```sql
 SELECT count(blocks.blkid)
@@ -162,7 +162,7 @@ VACUUM ANALYZE nyc_census_blocks;
 
 [geometry_a ~= 기하학_b](http://postgis.net/docs/ST_Geometry_Same.html): A의 경계 상자가 B의 경계 상자와 같으면 TRUE를 반환합니다.
 
-[ST_Intersects(geometry_a, 기하학_b)](http://postgis.net/docs/ST_Intersects.html): 기하학/지리학이 "공간적으로 교차"하는 경우(공간의 모든 부분 공유) TRUE를 반환하고 그렇지 않은 경우(분리됨) FALSE를 반환합니다.
+[ST_Intersects(geometry_a, geometry_b)](http://postgis.net/docs/ST_Intersects.html): 두 지오메트리 또는 지오그래피가 공간의 일부를 공유하면 `TRUE`, 서로 분리되어 있으면 `FALSE`를 반환합니다.
 
 **Footnotes**
 

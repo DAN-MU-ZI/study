@@ -105,7 +105,7 @@ FROM nyc_census_blocks;
 
 따라서 뉴욕의 800만 명 중 약 44%가 "백인"으로 기록되고 26%가 "흑인"으로 기록됩니다.
 
-Duke Ellington은 한때 "당신은 / A-트레인을 타야 합니다 / 할렘에 있는 Sugar Hill로 가려면 / 가야 합니다. "라고 노래한 적이 있습니다. 앞서 보았듯이 할렘은 맨해튼에서 아프리카계 미국인 인구가 단연 가장 높습니다(80.5%). Duke의 A-train도 마찬가지인가요?
+Duke Ellington은 할렘의 Sugar Hill에 가려면 A 열차를 타야 한다고 노래했습니다. 앞에서 보았듯이 할렘은 맨해튼에서 아프리카계 미국인 인구 비율이 가장 높은 지역입니다(80.5%). A 열차가 지나는 지역도 같은 특성을 보일까요?
 
 먼저 `nyc_subway_stations` 테이블 `routes` 필드의 내용이 A-train을 찾는 데 관심이 있는 내용입니다. 거기에 있는 값은 약간 복잡합니다.
 
@@ -226,7 +226,7 @@ ORDER BY black_pct DESC;
 
 [ST_DWithin(기하학 A, 기하학 B, 반경)](http://postgis.net/docs/ST_DWithin.html): 기하학이 서로 지정된 거리 내에 있는 경우 true를 반환합니다.
 
-[ST_Intersects(기하학 A, 기하학 B)](http://postgis.net/docs/ST_Intersects.html): 기하학/지리학이 "공간적으로 교차"하는 경우 TRUE를 반환하고(공간의 일부 공유) 그렇지 않은 경우(분리됨) FALSE를 반환합니다.
+[ST_Intersects(geometry A, geometry B)](http://postgis.net/docs/ST_Intersects.html): 두 지오메트리 또는 지오그래피가 공간의 일부를 공유하면 `TRUE`, 서로 분리되어 있으면 `FALSE`를 반환합니다.
 
 [round(v 숫자, s 정수)](http://www.postgresql.org/docs/current/interactive/functions-math.html): s 소수점 이하 자릿수로 반올림하는 PostgreSQL 수학 함수
 
