@@ -15,9 +15,7 @@ OGC 표준은 형상을 비교하기 위해 다음과 같은 방법 세트를 �
 
 `ST_Equals(geometry A, geometry B)`는 두 기하학의 공간 동일성을 테스트합니다.
 
-<figure class="align-center">
 ![이미지](spatial_relationships/st_equals.png)
-</figure>
 
 ST_Equals는 동일한 유형의 두 기하학이 동일한 x, y 좌표 값을 갖는 경우, 즉 두 번째 모양이 첫 번째 모양과 동일한 경우(동일한) TRUE를 리턴합니다.
 
@@ -52,27 +50,19 @@ WHERE ST_Equals(
 
 `ST_Intersects`, `ST_Crosses` 및 `ST_Overlaps`는 형상의 내부가 교차하는지 여부를 테스트합니다.
 
-<figure class="align-center">
 ![이미지](spatial_relationships/st_intersects.png)
-</figure>
 
 `ST_Intersects(geometry A, geometry B)`는 두 모양에 공통 공간이 있는 경우, 즉 경계나 내부가 교차하는 경우 t(TRUE)를 반환합니다.
 
-<figure class="align-center">
 ![이미지](spatial_relationships/st_disjoint.png)
-</figure>
 
 ST_Intersects의 반대는 `ST_Disjoint(geometry A , geometry B)`입니다. 두 개의 기하학이 분리되어 있으면 교차하지 않으며 그 반대도 마찬가지입니다. 실제로 교차 테스트는 공간적으로 인덱싱될 수 있지만 분리 테스트는 그렇지 않기 때문에 "해리"를 테스트하는 것보다 "교차하지 않음"을 테스트하는 것이 더 효율적인 경우가 많습니다.
 
-<figure class="align-center">
 ![이미지](spatial_relationships/st_crosses.png)
-</figure>
 
 다중점/다각형, 다중점/선스트링, 선스트링/선스트링, 선스트링/다각형 및 선스트링/다중다각형 비교의 경우, 교차로 인해 치수가 두 소스 도형의 최대 치수보다 1 작은 도형이 생성되고 교차 세트가 두 소스 도형의 내부에 있는 경우 `ST_Crosses(geometry A, geometry B)`는 t(TRUE)를 반환합니다.
 
-<figure class="align-center">
 ![이미지](spatial_relationships/st_overlaps.png)
-</figure>
 
 `ST_Overlaps(geometry A, geometry B)`는 동일한 치수의 두 Geometry를 비교하고 교차 세트로 인해 둘 다와 다르지만 동일한 치수의 Geometry가 생성되는 경우 TRUE를 리턴합니다.
 
@@ -100,9 +90,7 @@ WHERE ST_Intersects(geom, ST_GeomFromText('POINT(583571 4506714)',26918));
 
 `ST_Touches`는 두 개의 형상이 경계에서 접촉하지만 내부에서는 교차하지 않는지 테스트합니다.
 
-<figure class="align-center">
 ![이미지](spatial_relationships/st_touches.png)
-</figure>
 
 `ST_Touches(geometry A, geometry B)`는 기하학의 경계 중 하나가 교차하거나 기하학의 내부 중 하나만 다른 경계와 교차하는 경우 TRUE를 리턴합니다.
 
@@ -110,9 +98,7 @@ WHERE ST_Intersects(geom, ST_GeomFromText('POINT(583571 4506714)',26918));
 
 `ST_Within` 및 `ST_Contains`는 한 형상이 다른 형상 내에 완전히 있는지 여부를 테스트합니다.
 
-<figure class="align-center">
 ![이미지](spatial_relationships/st_within.png)
-</figure>
 
 `ST_Within(geometry A , geometry B)`는 첫 번째 기하학이 완전히 두 번째 기하학 내에 있는 경우 TRUE를 리턴합니다. ST_Within은 ST_Contains의 정반대 결과를 테스트합니다.
 
@@ -134,9 +120,7 @@ SELECT ST_Distance(
 
 두 객체가 서로의 거리 내에 있는지 테스트하기 위해 `ST_DWithin` 함수는 인덱스 가속 참/거짓 테스트를 제공합니다. 이는 "도로의 500미터 완충 내에 나무가 몇 그루나 있습니까?"와 같은 질문에 유용합니다. 실제 버퍼를 계산할 필요는 없으며 거리 관계만 테스트하면 됩니다.
 
-<figure class="align-center">
 ![이미지](spatial_relationships/st_dwithin.png)
-</figure>
 
 Broad Street 지하철 역을 다시 이용하면 지하철 정류장 근처(10미터 이내)의 거리를 찾을 수 있습니다.
 
