@@ -74,6 +74,10 @@ ERROR: ST_Equals: Operation on mixed SRID geometries (Point, 4326) != (Point, 26
 
 SRID `26918` (NAD83 / UTM zone 18N, 미터 단위 투영 좌표계)로 저장된 'Broad St' 지하철역의 위치를 전 세계 표준 경위도 좌표계인 **EPSG:4326 (WGS84)**으로 변환해 보겠습니다.
 
+![Broad St의 현실 위치는 유지하면서 SRID 26918 좌표를 EPSG 4326 좌표로 변환하는 흐름](projection/srid-transform-flow.png)
+
+*그림 16-1. `ST_Transform`은 같은 현실 위치를 다른 좌표계의 좌표값으로 변환합니다. 반면 `ST_SetSRID`는 기존 `(x, y)` 값의 좌표계를 선언할 뿐 값을 변환하지 않으므로, 원래 좌표계를 정확히 알고 있을 때만 사용해야 합니다. 지도는 위치 관계를 설명하는 개념도입니다.*
+
 ```sql
 SELECT ST_AsText(ST_Transform(geom, 4326))
 FROM nyc_subway_stations

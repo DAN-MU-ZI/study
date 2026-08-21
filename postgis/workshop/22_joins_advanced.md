@@ -68,6 +68,10 @@ CREATE INDEX nyc_census_tract_gidx
 
 > **분석 질문**: "대학원 학위(석사/박사) 소지자 비율이 가장 높은 상위 10개 근린지역은 어디일까요?"
 
+![폴리곤 경계와 지하철역 반경이 만드는 중복 집계 문제와 해결 흐름](joins_advanced/double-counting-flow.png)
+
+*그림 22-1. 위쪽은 하나의 인구조사구가 여러 근린지역과 교차할 때 생기는 중복을 `ST_PointOnSurface`와 `ST_Contains`로 해결하는 과정입니다. 아래쪽은 하나의 인구조사 블록이 여러 역의 500m 반경에 들어갈 때 `DISTINCT ON (blkid)`로 블록을 한 번만 남기는 과정입니다. 공간 모양과 반경은 개념도이며 실제 축척을 나타내지 않습니다.*
+
 먼저 단순 `ST_Intersects` 공간 조인으로 쿼리를 작성해 봅니다.
 
 ```sql

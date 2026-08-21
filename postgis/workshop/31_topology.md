@@ -69,6 +69,10 @@ WHERE ST_IsValid(geom);
 
 동네(Neighborhoods) 단위의 TopoGeometry들을 모아서 상위 자치구(Boroughs) 레이어를 구축할 수 있습니다.
 
+![일반 근린지역 폴리곤이 공유 노드 에지 페이스로 변환되고 자치구 계층과 경계 분쟁 해결로 이어지는 흐름](topology/topogeometry-hierarchy-flow.png)
+
+*그림 31-1. `toTopoGeom`은 독립적으로 저장된 근린지역 폴리곤을 공유 노드·에지·페이스로 분해하고, `nyc_neighborhoods_t.topo`는 이 요소의 관계를 참조합니다. 근린지역 TopoGeometry를 묶으면 자치구 TopoGeometry가 되며, 둘 이상의 객체가 같은 페이스를 소유한 경우에는 이를 검출해 한쪽 관계에서 제거합니다. 공간 모양은 개념도입니다.*
+
 ```sql
 CREATE TABLE nyc_boros_t (
   boroname varchar(43),

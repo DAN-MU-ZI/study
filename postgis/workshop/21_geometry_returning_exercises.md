@@ -84,6 +84,10 @@ SELECT ST_Area(ST_Buffer('POINT(0 0)'::geometry, 1));
 
 ### 4. 브루클린의 'Park Slope'와 'Carroll Gardens' 근린지역 경계에 폭 100m의 완충 지대(DMZ: 각 동네 경계에서 50m씩 버퍼링한 후 교집합)를 만들 때, 이 DMZ의 총 면적은 얼마입니까?
 
+![Park Slope와 Carroll Gardens를 각각 50미터 버퍼링하고 겹치는 부분만 DMZ로 추출하는 흐름](geometry_returning_exercises/brooklyn-dmz-flow.png)
+
+*그림 21-1. 두 근린지역 폴리곤을 각각 50m 확장하면 공유 경계를 중심으로 완충 영역이 겹칩니다. `ST_Intersection`은 두 버퍼의 공통 부분만 남겨 폭 100m의 `brooklyn_dmz.geom`을 생성합니다. 지도와 폭은 처리 원리를 설명하는 개념도입니다.*
+
 ```sql
 CREATE TABLE brooklyn_dmz AS
 SELECT

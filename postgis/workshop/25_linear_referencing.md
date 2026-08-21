@@ -32,6 +32,10 @@ SELECT ST_LineLocatePoint('LINESTRING(0 0, 2 2)', 'POINT(0 2)');
 
 `ST_LineLocatePoint`를 사용하여 지하철역(`nyc_subway_stations`)을 인접 도로(`nyc_streets`)에 매핑된 이벤트 테이블로 변환해 보겠습니다.
 
+![지하철역 포인트에서 후보 도로를 찾고 선형 위치값으로 저장한 뒤 도로 위 포인트로 복원하는 흐름](linear_referencing/station-event-flow.png)
+
+*그림 25-1. 역에서 200m 이내인 도로를 찾고 가장 가까운 도로 하나를 선택한 다음, 역의 위치를 도로 전체 길이 중 0.0~1.0의 `measure`로 저장합니다. 이후 `ST_LineInterpolatePoint`가 도로 지오메트리와 `measure`를 사용해 도로 중심선 위의 포인트를 다시 생성합니다. 지도는 학습용 개념도이며 실제 축척을 나타내지 않습니다.*
+
 ```sql
 CREATE TABLE nyc_subway_station_events AS
 WITH ordered_nearest AS (

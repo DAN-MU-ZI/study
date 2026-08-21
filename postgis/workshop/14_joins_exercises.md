@@ -22,6 +22,10 @@
 - `nyc_subway_stations`: `name`, `routes`, `geom`
 - `nyc_neighborhoods`: `name`, `boroname`, `geom`
 
+![네 가지 공간 조인 실습에서 현실 공간이 테이블과 공간 함수 및 결과로 이어지는 전체 흐름](joins_exercises/query-flow-overview.png)
+
+*그림 14-1. 실제 지도에서 근린지역은 폴리곤, 역은 포인트, 인구조사 블록은 작은 폴리곤으로 표현됩니다. 각 문제는 현실 객체의 `geom`을 `ST_Contains` 또는 `ST_Intersects`로 연결한 뒤, 필터링·중복 제거·집계를 거쳐 질문에 맞는 결과를 만듭니다. 지도는 학습용 개념도이며 실제 축척·경계를 나타내지 않습니다.*
+
 ---
 
 ## 연습 문제 및 정답

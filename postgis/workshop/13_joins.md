@@ -9,6 +9,10 @@
 
 공간 조인을 사용하면 이 과정을 단 하나의 SQL 쿼리로 우아하게 해결할 수 있습니다.
 
+![Broad St 역이 Financial District 근린지역 안에 포함되는 현실 공간과 ST_Contains 조인 흐름](joins/broad-st-spatial-join.png)
+
+*그림 13-1. 현실 공간의 근린지역 폴리곤과 지하철역 포인트가 각각 `geom` 컬럼으로 저장되고, `ST_Contains`로 연결되는 과정입니다. 지도는 쿼리의 공간 개념을 설명하기 위한 개념도이며 실제 축척·경계를 나타내지 않습니다.*
+
 ```sql
 SELECT
   subways.name AS subway_name,
@@ -37,6 +41,10 @@ WHERE subways.name = 'Broad St';
 > **분석 질문**: "맨해튼(Manhattan) 내 각 근린지역(Neighborhood)별 총 인구수와 백인/흑인 인구 비율(%)은 어떻게 됩니까?"
 
 인구 통계가 담긴 `nyc_census_blocks` 테이블과 동네 경계가 담긴 `nyc_neighborhoods` 테이블을 `ST_Intersects` 공간 조인으로 결합하고, 동네별로 집계(`GROUP BY`)합니다.
+
+![맨해튼 근린지역 폴리곤과 인구조사 블록을 교차시켜 근린지역별로 집계하는 흐름](joins/manhattan-join-summarize.png)
+
+*그림 13-2. 맨해튼의 각 인구조사 블록을 교차하는 근린지역에 배정한 뒤, 근린지역별 인구와 인종 비율을 집계합니다. 지도는 학습용 개념도이며 실제 축척·경계를 나타내지 않습니다.*
 
 ```sql
 SELECT
@@ -101,6 +109,10 @@ ORDER BY white_pct DESC;
 
 먼저 뉴욕시 전체 인구 구성을 조회합니다.
 
+![뉴욕시 전체 인구조사 블록의 인구 컬럼을 조인 없이 집계하는 흐름](joins/nyc-citywide-aggregate.png)
+
+*그림 13-3. 뉴욕시 전체 인구조사 블록을 대상으로 `popn_white`, `popn_black`, `popn_total`을 합산합니다. 이 기준 쿼리는 다른 테이블과 조인하지 않습니다. 지도는 학습용 개념도이며 실제 축척·경계를 나타내지 않습니다.*
+
 ```sql
 SELECT
   100.0 * sum(popn_white) / sum(popn_total) AS white_pct,
@@ -116,6 +128,10 @@ FROM nyc_census_blocks;
 ```
 
 A 노선이 정차하는 역을 필터링하여 반경 200m 이내 인구조사 블록을 `ST_DWithin` 공간 조인으로 연결합니다.
+
+![A 노선 역마다 200미터 반경을 만들고 그 안의 인구조사 블록을 선택하는 흐름](joins/a-train-distance-join.png)
+
+*그림 13-4. A 노선 역 포인트의 200m 반경과 인구조사 블록을 `ST_DWithin`으로 연결합니다. 주황색 블록이 역세권 집계 대상이 되는 공간적 의미를 보여 줍니다. 지도는 학습용 개념도이며 실제 노선·축척을 나타내지 않습니다.*
 
 ```sql
 SELECT
@@ -144,6 +160,10 @@ WHERE strpos(subways.routes, 'A') > 0;
 
 각 노선(A, B, C, 1, 2, 3...) 목록을 담은 테이블을 생성하고, 공간 조인과 속성 조인을 함께 결합합니다.
 
+![실제 지하철 노선 식별자를 subway_lines 테이블의 route 컬럼에 행 단위로 저장하는 흐름](joins/subway-lines-lookup.png)
+
+*그림 13-5. 현실의 지하철 노선 식별자를 `subway_lines.route`에 한 노선당 한 행으로 저장하여 조인용 기준 테이블을 만듭니다.*
+
 ```sql
 CREATE TABLE subway_lines ( route char(1) );
 INSERT INTO subway_lines (route) VALUES
@@ -152,6 +172,10 @@ INSERT INTO subway_lines (route) VALUES
   ('Z'),('1'),('2'),('3'),('4'),('5'),('6'),
   ('7');
 ```
+
+![모든 지하철 노선의 200미터 역세권 인구를 공간 조인과 속성 조인으로 집계하는 흐름](joins/multiple-spatial-attribute-joins.png)
+
+*그림 13-6. 인구조사 블록과 역을 `ST_DWithin`으로 공간 조인하고, 역의 `routes`와 노선 기준 테이블의 `route`를 `strpos`로 속성 조인한 뒤 노선별로 집계합니다. 지도는 학습용 개념도이며 실제 노선·축척을 나타내지 않습니다.*
 
 ```sql
 SELECT
