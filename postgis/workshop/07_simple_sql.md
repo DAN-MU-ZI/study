@@ -1,59 +1,62 @@
-# 7. 단순 SQL (Simple SQL)
+# 7. 기본 SQL (Simple SQL)
 
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/simple_sql.html>](https://postgis.net/workshops/postgis-intro/simple_sql.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
-`SQL` 또는 "구조적 쿼리 언어"는 관계형 데이터베이스에 대해 질문하고 데이터를 업데이트하는 수단입니다. 첫 번째 데이터베이스를 만들 때 이미 SQL을 보았습니다. 상기하다:
+**SQL(Structured Query Language, 구조화 질의 언어)**은 관계형 데이터베이스에서 데이터를 질의하고 조작하기 위한 표준 언어입니다. 4장에서 PostGIS 확장을 활성화하고 버전을 확인할 때 이미 첫 SQL 명령을 실행해 보았습니다.
 
 ```sql
 SELECT postgis_full_version();
 ```
 
-앞서서는 데이터베이스 자체를 살펴보았습니다. 이제 데이터를 불러왔으므로 SQL로 데이터를 질의해 보겠습니다. 예를 들어,
+데이터베이스에 실습 데이터가 준비되었으므로, 이제 본격적으로 SQL을 사용하여 실제 데이터를 질의해 보겠습니다.
 
-> "뉴욕 시의 모든 동네 이름은 무엇입니까?"
+> **질문**: "뉴욕시의 모든 근린지역(Neighborhoods) 이름은 무엇인가요?"
 
-"쿼리 도구" 버튼을 클릭하여 pgAdmin에서 SQL 쿼리 창을 엽니다.
+pgAdmin에서 상단의 **Query Tool** 아이콘을 클릭하여 SQL 쿼리 편집기를 엽니다.
 
 ![이미지](screenshots/pgadmin_05.png)
 
-그런 다음 쿼리 창에 다음 쿼리를 입력합니다.
+쿼리 창에 다음 SQL을 입력합니다.
 
 ```sql
 SELECT name FROM nyc_neighborhoods;
 ```
 
-**Execute Query** 버튼(녹색 삼각형)을 클릭합니다.
+**Execute Query** 버튼(▶)을 클릭하거나 **F5** 키를 누릅니다.
 
 ![이미지](screenshots/pgadmin_08.png)
 
-쿼리는 몇(밀리)초 동안 실행되고 129개의 결과를 반환합니다.
+쿼리가 몇 밀리초(ms) 만에 실행되고 총 129건의 결과가 반환됩니다.
 
 ![image](screenshots/pgadmin_09.png)
 
-그런데 여기서 정확히 무슨 일이 일어났나요? 이해를 돕기 위해 SQL의 네 가지 "동사"부터 시작하겠습니다.
+### SQL의 4대 핵심 명령어 (DML)
 
-- `SELECT`, 쿼리에 대한 응답으로 행을 반환합니다.
-- `INSERT`, 테이블에 새 행 추가
-- `UPDATE`, 테이블의 기존 행을 변경합니다.
-- `DELETE`, 테이블에서 행을 제거합니다.
+- `SELECT`: 데이터베이스에서 조건에 맞는 행(Row)을 검색하여 반환합니다.
+- `INSERT`: 테이블에 새로운 행을 추가합니다.
+- `UPDATE`: 테이블의 기존 행 데이터를 수정합니다.
+- `DELETE`: 테이블에서 특정 행을 삭제합니다.
 
-이 워크숍에서는 공간 함수를 이용해 테이블을 조회할 때 대부분 `SELECT` 문을 사용합니다.
+본 워크숍의 공간 데이터 분석 및 공간 함수 실습에서는 대부분 `SELECT` 문을 사용합니다.
 
-## SELECT 쿼리
+---
 
-선택 쿼리의 형식은 일반적으로 다음과 같습니다.
+## SELECT 쿼리 기본 구조
 
-    SELECT some_columns FROM some_data_source WHERE some_condition;
+`SELECT` 쿼리의 가장 기본적인 형태는 다음과 같습니다.
 
-> [!NOTE]
-> 모든 `SELECT` 매개변수의 개요는 [PostgresSQL 문서](http://www.postgresql.org/docs/current/interactive/sql-select.html)를 참조하세요.
+```sql
+SELECT some_columns FROM some_data_source WHERE some_condition;
+```
 
-`some_columns`는 열 이름이거나 열 값의 함수입니다. `some_data_source`는 단일 테이블이거나 키 또는 조건에 대해 두 테이블을 조인하여 생성된 복합 테이블입니다. `some_condition`는 반환할 행 수를 제한하는 필터입니다.
+- `some_columns`: 조회하려는 컬럼명 또는 컬럼 값을 가공하는 함수/수식입니다.
+- `some_data_source`: 데이터를 가져올 대상 테이블이거나, 조인(Join)된 복합 테이블입니다.
+- `some_condition`: 반환할 행을 제한하는 조건 필터식입니다.
 
-> "브루클린에 있는 모든 동네의 이름은 무엇입니까?"
+> **질문**: "브루클린(Brooklyn) 자치구에 속한 근린지역 이름은 무엇인가요?"
 
-필터를 손에 들고 `nyc_neighborhoods` 테이블로 돌아갑니다. 테이블에는 뉴욕의 모든 동네가 포함되어 있지만 우리는 브루클린의 동네만 원합니다.
+`WHERE` 절에 조건을 추가하여 브루클린에 속한 동네만 필터링합니다.
 
 ```sql
 SELECT name
@@ -61,25 +64,29 @@ SELECT name
   WHERE boroname = 'Brooklyn';
 ```
 
-쿼리는 훨씬 더 짧은(밀리)초 동안 실행되고 23개의 결과를 반환합니다.
+실행하면 브루클린에 속한 23개의 근린지역 이름이 반환됩니다.
 
-때로는 쿼리 결과에 함수를 적용해야 할 때도 있습니다. 예를 들어,
+---
 
-> "브루클린의 모든 동네 이름은 몇 글자인가요?"
+## 함수 활용 및 집계 (Aggregation)
 
-다행히 PostgreSQL에는 `char_length(string)`라는 문자열 길이 함수가 있습니다.
+쿼리 결과에 문자열이나 수치 계산 함수를 적용할 수 있습니다.
+
+> **질문**: "브루클린의 각 근린지역 이름은 몇 글자(문자 수)인가요?"
+
+PostgreSQL 내장 문자열 함수인 `char_length(string)`를 사용합니다.
 
 ```sql
-SELECT char_length(name)
+SELECT name, char_length(name)
   FROM nyc_neighborhoods
   WHERE boroname = 'Brooklyn';
 ```
 
-종종 우리는 개별 행보다 모든 행에 적용되는 통계에 관심이 덜합니다. 따라서 동네 이름의 길이를 아는 것은 이름의 평균 길이를 아는 것보다 덜 흥미롭습니다. 여러 행을 가져와 단일 결과를 반환하는 함수를 "집계" 함수라고 합니다.
+실무에서는 개별 행의 값뿐만 아니라 전체 데이터의 요약 통계(평균, 합계, 표준편차 등)가 필요할 때가 많습니다. 여러 행의 데이터를 입력받아 단일 요약 값을 계산하는 함수를 **집계 함수(Aggregate Function)**라고 합니다.
 
-PostgreSQL에는 평균값을 위한 범용 `avg()`와 표준편차를 위한 `stddev()`를 포함한 일련의 내장 집계 함수가 있습니다.
+PostgreSQL은 평균을 구하는 `avg()`, 표준편차를 구하는 `stddev()`, 합계를 구하는 `sum()`, 개수를 세는 `count()` 등 풍부한 내장 집계 함수를 제공합니다.
 
-> "브루클린 전체 동네 이름의 평균 글자 수와 글자 수의 표준편차는 얼마인가요?"
+> **질문**: "브루클린 전체 근린지역 이름 길이의 평균과 표준편차는 얼마인가요?"
 
 ```sql
 SELECT avg(char_length(name)), stddev(char_length(name))
@@ -87,13 +94,19 @@ SELECT avg(char_length(name)), stddev(char_length(name))
   WHERE boroname = 'Brooklyn';
 ```
 
-    avg         |       stddev
-    ---------------------+--------------------
-    11.7391304347826087 | 3.9105613559407395
+```text
+        avg         |       stddev
+--------------------+--------------------
+11.7391304347826087 | 3.9105613559407395
+```
 
-마지막 예의 집계 함수는 결과 집합의 모든 행에 적용되었습니다. 전체 결과 집합 내에서 더 작은 그룹에 대해 요약을 수행하려면 어떻게 해야 합니까? 이를 위해 `GROUP BY` 절을 추가합니다. 집계 함수에는 하나 이상의 열로 결과 집합을 그룹화하기 위해 추가된 `GROUP BY` 문이 필요한 경우가 많습니다.
+---
 
-> "자치구에서 보고한 뉴욕시 전체 동네 이름의 평균 문자 수는 얼마입니까?"
+## 그룹화 (GROUP BY)
+
+위의 집계 함수는 결과 전체에 대해 단일 통계를 냈습니다. 만약 자치구(Borough)별로 각각 평균과 표준편차를 구하고 싶다면 어떻게 해야 할까요? 이럴 때 `GROUP BY` 절을 사용합니다.
+
+> **질문**: "뉴욕시의 5개 자치구별 근린지역 이름 길이의 평균과 표준편차는 얼마인가요?"
 
 ```sql
 SELECT boroname, avg(char_length(name)), stddev(char_length(name))
@@ -101,23 +114,26 @@ SELECT boroname, avg(char_length(name)), stddev(char_length(name))
   GROUP BY boroname;
 ```
 
-어떤 통계가 어느 자치구에 적용되는지 확인할 수 있도록 출력 결과에 `boroname` 열을 포함합니다. 집계 쿼리에서는 (a) 그룹화 절의 멤버이거나 (b) 집계 함수인 열만 출력할 수 있습니다.
+```text
+   boroname    |         avg         |       stddev
+---------------+---------------------+--------------------
+ Brooklyn      | 11.7391304347826087 | 3.9105613559407395
+ Manhattan     | 11.8214285714285714 | 4.3123729948325257
+ The Bronx     | 12.0416666666666667 | 3.6651017740975152
+ Queens        | 11.6666666666666667 | 5.0057438272815975
+ Staten Island | 12.2916666666666667 | 5.2043390480959474
+```
 
-    boroname    |         avg         |       stddev
-    ---------------+---------------------+--------------------
-    Brooklyn      | 11.7391304347826087 | 3.9105613559407395
-    Manhattan     | 11.8214285714285714 | 4.3123729948325257
-    The Bronx     | 12.0416666666666667 | 3.6651017740975152
-    Queens        | 11.6666666666666667 | 5.0057438272815975
-    Staten Island | 12.2916666666666667 | 5.2043390480959474
+> [!NOTE]
+> 집계 쿼리(`GROUP BY`)를 실행할 때 `SELECT` 절에는 (1) `GROUP BY`에 지정된 그룹화 컬럼이거나 (2) `avg()`, `sum()`과 같은 집계 함수만 올 수 있습니다.
 
-## 기능 목록
+---
 
-[avg(expression)](http://www.postgresql.org/docs/current/static/functions-aggregate.html#FUNCTIONS-AGGREGATE-TABLE): 숫자 열의 평균 값을 반환하는 PostgreSQL 집계 함수입니다.
+## 함수 목록 (Function List)
 
-[char_length(string)](http://www.postgresql.org/docs/current/static/functions-string.html): 문자열의 문자 수를 반환하는 PostgreSQL 문자열 함수입니다.
-
-[stddev(expression)](http://www.postgresql.org/docs/current/static/functions-aggregate.html#FUNCTIONS-AGGREGATE-STATISTICS-TABLE): 입력 값의 표준 편차를 반환하는 PostgreSQL 집계 함수입니다.
+- [avg(expression)](http://www.postgresql.org/docs/current/static/functions-aggregate.html#FUNCTIONS-AGGREGATE-TABLE): 수치 컬럼 또는 표현식의 산술 평균값을 계산합니다.
+- [char_length(string)](http://www.postgresql.org/docs/current/static/functions-string.html): 문자열의 글자 수를 반환합니다.
+- [stddev(expression)](http://www.postgresql.org/docs/current/static/functions-aggregate.html#FUNCTIONS-AGGREGATE-STATISTICS-TABLE): 입력 값 집합의 표본 표준편차를 계산합니다.
 
 
 ---

@@ -3,99 +3,95 @@
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/knn.html>](https://postgis.net/workshops/postgis-intro/knn.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
-## 최근접이웃 검색이란 무엇인가요?
+**최근접 이웃 탐색(KNN, K-Nearest Neighbor Searching)**은 GIS 질의에서 가장 빈번하게 요구되는 패턴 중 하나입니다.
 
-자주 제기되는 공간 쿼리는 "\<query feature\>에 가장 가까운 \<candidate feature\>는 무엇입니까?"입니다.
+> "내 현재 위치에서 **가장 가까운 주유소 3곳**은 어디인가?"
 
-거리 검색과 달리 "가장 가까운 이웃" 검색에는 후보 도형이 얼마나 멀리 떨어져 있는지를 제한하는 측정값이 포함되지 않으며 *가장 가까운* 피처인 한 모든 거리에 있는 피처가 허용됩니다.
+기존의 `ST_Distance(A, B)` 함수를 사용해 `ORDER BY ST_Distance(...) LIMIT N`으로 작성하면, 데이터베이스가 테이블의 모든 행에 대해 거리를 계산한 뒤 정렬해야 하므로 대용량 테이블에서 매우 느립니다.
 
-PostgreSQL은 정렬된 반환 집합의 속도를 높이기 위해 데이터베이스가 인덱스를 사용하도록 유도하는 "거리별 순서"(`<->`) 연산자를 도입하여 최근접 이웃 문제를 해결합니다. "거리별 순서" 연산자를 사용하면 가장 가까운 이웃 쿼리에서 순서를 추가하고 결과 집합을 N 항목으로 제한하는 것만으로 "N개의 가장 가까운 기능"을 반환할 수 있습니다.
+PostGIS는 공간 인덱스(GiST)를 통해 트리 레벨에서 가장 가까운 노드부터 우선 탐색(Branch-and-Bound)할 수 있는 **거리 기반 인덱스 정렬 연산자(`<->`)**를 제공합니다.
 
-"거리별 정렬" 연산자는 기하학과 지리 유형 모두에 작동합니다. 두 유형 간의 작동 방식의 유일한 차이점은 반환되는 거리 값입니다. 기하학의 경우 `<->`는 사용 중인 공간 참조 시스템의 단위에 따라 <span class="title-ref">ST_Distance</span>와 동일한 대답을 반환합니다. 지리의 경우 반환되는 거리 값은 `ST_Distance(geography,geography)`가 반환하는 더 정확한 타원체 거리가 아니라 구형 거리입니다.
+---
 
-'Broad St' 지하철역에서 가장 가까운 3개 거리는 다음과 같습니다.
+## 1. `<->` 연산자를 활용한 고속 KNN 쿼리
 
-```sql
--- Get the geometry of Broad St
-SELECT ST_AsEWKT(geom, 1)
-FROM nyc_subway_stations
-WHERE name = 'Broad St';
-```
-
-    SRID=26918;POINT(583571.9 4506714.3)
+`ORDER BY geom <-> 'POINT(...)'::geometry LIMIT N` 구문을 사용하면 테이블 전체를 스캔하지 않고도 **인덱스를 통해 가장 가까운 N개의 결과만 즉시 추출**합니다.
 
 ```sql
--- Plug the geometry into a nearest-neighbor query
-SELECT streets.gid, streets.name,
-  ST_Transform(streets.geom, 4326),
+-- 'Broad St' 지하철역에서 가장 가까운 도로 3개 검색
+SELECT
+  streets.gid,
+  streets.name,
   streets.geom <-> 'SRID=26918;POINT(583571.9 4506714.3)'::geometry AS dist
-FROM
-  nyc_streets streets
-ORDER BY
-  dist
+FROM nyc_streets AS streets
+ORDER BY dist
 LIMIT 3;
 ```
 
-    gid  |   name    |        dist
-    -------+-----------+--------------------
-    17385 | Wall St   |  0.749987508809928
-    17390 | Broad St  | 0.8836306235191059
-    17436 | Nassau St | 1.3368280241070414
+```text
+  gid  |   name    |        dist
+-------+-----------+--------------------
+ 17385 | Wall St   |  0.749987508809928
+ 17390 | Broad St  | 0.8836306235191059
+ 17436 | Nassau St | 1.3368280241070414
+```
 
 ![이미지](screenshots/knn5.png)
 
-인덱스 지원 쿼리를 받고 있는지 어떻게 확인할 수 있나요? 가장 가까운 이웃 쿼리에 대한 `EXPLAIN` 출력을 확인하는 것이 좋습니다. 왜냐하면 인덱싱되지 않은 SQL에서 올바른 답변을 얻을 수 있고 테이블 크기가 확장될 때까지 인덱스 부족이 명확하지 않을 수 있기 때문입니다.
-
-이것은 `EXPLAIN`의 출력입니다. 다음 순서에 대한 인덱스 스캔을 참고하세요.
-
-    QUERY PLAN
-    ---------------------------------------------------------------------------------
-    Limit  (cost=0.28..79.58 rows=3 width=31)
-    ->  Index Scan using nyc_streets_geom_idx on nyc_streets streets
-    (cost=0.28..504685.12 rows=19091 width=31)
-    Order By:
-    (geom <-> '0101000020266900000EEBD4CF27CF2141BC17D69516315141'::geometry)
-
-## 가장 가까운 이웃 조인
-
-연산자에 의한 색인 지원 순서에는 한 가지 주요 단점이 있습니다. 즉, 연산자 한쪽의 **단일 기하학 리터럴**에서만 작동합니다. 이는 하나의 쿼리 개체에 가장 가까운 개체를 찾는 데는 적합하지만 전체 후보 집합 각각에 대해 가장 가까운 이웃을 찾는 것이 목표인 공간 조인에는 도움이 되지 않습니다.
-
-다행히 루프에서 반복적으로 구동되는 쿼리를 실행할 수 있는 SQL 언어 기능인 [LATERAL 조인](https://medium.com/kkempin/postgresqls-lateral-join-bfd6bd0199df)이 있습니다.
-
-여기서는 각 지하철역에서 가장 가까운 거리를 찾아보겠습니다.
+### EXPLAIN으로 인덱스 스캔 실행 계획 확인
 
 ```sql
-SELECT subways.gid AS subway_gid,
-       subways.name AS subway,
-       streets.name AS street,
-       streets.gid AS street_gid,
-       streets.geom::geometry(MultiLinestring, 26918) AS street_geom,
-       streets.dist
-FROM nyc_subway_stations subways
+EXPLAIN
+SELECT streets.gid, streets.name
+FROM nyc_streets AS streets
+ORDER BY streets.geom <-> 'SRID=26918;POINT(583571.9 4506714.3)'::geometry
+LIMIT 3;
+```
+
+```text
+QUERY PLAN
+---------------------------------------------------------------------------------
+Limit  (cost=0.28..79.58 rows=3 width=31)
+  ->  Index Scan using nyc_streets_geom_idx on nyc_streets streets
+        Order By: (geom <-> '0101000020266900000EEBD4CF27CF2141BC17D69516315141'::geometry)
+```
+
+실행 계획을 보면 전체 테이블을 읽지 않고 `Index Scan`으로 상위 3개 행만 즉시 반환함을 확인할 수 있습니다.
+
+---
+
+## 2. LATERAL 조인을 활용한 다대다 최근접 이웃 조인 (KNN Join)
+
+`<->` 연산자는 우변에 **단일 지오메트리 상수(리터럴)**가 올 때 인덱스를 직접 탈 수 있습니다. 만약 "모든 지하철역 각각에 대해 가장 가까운 도로 1개씩 찾기"와 같은 다대다 조인을 수행하려면 어떻게 해야 할까요?
+
+PostgreSQL의 **`LATERAL` 조인**을 사용하면 각 행마다 서브쿼리를 실행하면서 인덱스 스캔을 적용할 수 있습니다.
+
+```sql
+SELECT
+  subways.gid AS subway_gid,
+  subways.name AS subway_name,
+  streets.name AS nearest_street_name,
+  streets.dist AS distance_meters
+FROM nyc_subway_stations AS subways
 CROSS JOIN LATERAL (
-  SELECT streets.name, streets.geom, streets.gid, streets.geom <-> subways.geom AS dist
+  SELECT
+    streets.name,
+    streets.geom <-> subways.geom AS dist
   FROM nyc_streets AS streets
   ORDER BY dist
   LIMIT 1
-) streets;
+) AS streets;
 ```
-
-`CROSS JOIN LATERAL`은 지하철역 테이블의 각 행을 순회하면서 안쪽의 하위 쿼리를 실행합니다. 각 지하철역 레코드가 `LATERAL` 하위 쿼리에 하나씩 전달되므로 역마다 가장 가까운 결과를 찾을 수 있습니다.
 
 ![이미지](screenshots/knn4.png)
 
-설명은 지하철 역의 루프와 우리가 원하는 루프 내부의 인덱스 지원 순서를 보여줍니다.
+`CROSS JOIN LATERAL`은 지하철역 테이블의 491개 행을 하나씩 순회하면서, 내부의 도로 테이블 서브쿼리에 공간 인덱스 스캔을 적용하므로 491개의 최근접 매칭을 순식간에 완료합니다.
 
-    QUERY PLAN
-    -------------------------------------------------------------------------
-    Nested Loop  (cost=0.28..13140.71 rows=491 width=37)
-    ->  Seq Scan on nyc_subway_stations subways
-    (cost=0.00..15.91 rows=491 width=46)
-    ->  Limit
-    (cost=0.28..1.71 rows=1 width=170)
-    ->  Index Scan using nyc_streets_geom_idx on nyc_streets streets
-    (cost=0.28..27410.12 rows=19091 width=170)
-    Order By: (geom <-> subways.geom)
+---
+
+## 함수 및 연산자 목록
+
+- [geometry_a <-> geometry_b](http://postgis.net/docs/geometry_distance_knn.html): 두 지오메트리 간의 2차원 바운딩 박스/중심점 거리를 계산하며, `ORDER BY` 절에서 GiST 공간 인덱스를 활용한 고속 KNN 탐색을 지원합니다.
 
 
 ---

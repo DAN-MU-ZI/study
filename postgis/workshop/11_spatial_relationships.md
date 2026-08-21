@@ -3,23 +3,27 @@
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/spatial_relationships.html>](https://postgis.net/workshops/postgis-intro/spatial_relationships.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
-지금까지 우리는 기하학을 측정(`ST_Area`, `ST_Length`), 직렬화(`ST_GeomFromText`) 또는 역직렬화(`ST_AsGML`)하는 공간 함수만 사용했습니다. 이러한 기능의 공통점은 한 번에 하나의 형상에만 작동한다는 것입니다.
+지금까지는 단일 지오메트리의 속성을 측정(`ST_Area`, `ST_Length`)하거나 포맷을 직렬화(`ST_GeomFromText`, `ST_AsGeoJSON`)하는 단항 함수들을 주로 다루었습니다.
 
-공간 데이터베이스는 기하학을 저장할 뿐만 아니라 *기하학 간의 관계*를 비교할 수 있는 기능도 갖추고 있기 때문에 강력합니다.
+공간 데이터베이스가 진정한 위력을 발휘하는 순간은 지오메트리를 단순히 저장하는 것을 넘어 **지오메트리 간의 공간적 관계(Spatial Relationships)**를 비교하고 분석할 때입니다.
 
-"공원에서 가장 가까운 자전거 거치대는 어디인가요?"와 같은 질문입니다. 또는 "지하철 노선과 거리의 교차로는 어디에 있습니까?" 자전거 거치대, 거리, 지하철 노선을 나타내는 형상을 비교해야만 답을 얻을 수 있습니다.
+- "이 공원에서 반경 500m 이내에 있는 모든 자전거 대여소는 어디인가?"
+- "이 지하철 노선과 교차하는 도로들은 무엇인가?"
+- "이 특정 선거구 내에 완전히 포함되는 인구조사 블록은 무엇인가?"
 
-OGC 표준은 형상을 비교하기 위해 다음과 같은 방법 세트를 정의합니다.
+이러한 현실 세계의 공간적 질문들은 두 개 이상의 지오메트리를 서로 비교하는 공간 관계 판별 함수를 통해 해결할 수 있습니다. OGC 표준은 공간 관계를 판별하기 위해 다음과 같은 공간 술어(Spatial Predicates) 함수들을 정의합니다.
 
-## ST_Equals
+---
 
-`ST_Equals(geometry A, geometry B)`는 두 기하학의 공간 동일성을 테스트합니다.
+## 1. ST_Equals
+
+`ST_Equals(geometry A, geometry B)`는 두 지오메트리가 공간적으로 완전히 동일한 형태와 위치를 가지는지 검사합니다.
 
 ![이미지](spatial_relationships/st_equals.png)
 
-ST_Equals는 동일한 유형의 두 기하학이 동일한 x, y 좌표 값을 갖는 경우, 즉 두 번째 모양이 첫 번째 모양과 동일한 경우(동일한) TRUE를 리턴합니다.
+동일한 지오메트리 타입의 두 객체가 정확히 동일한 X, Y 좌표 구조를 가지는 경우 `TRUE`를 반환합니다.
 
-먼저 `nyc_subway_stations` 테이블에서 점 표현을 검색해 보겠습니다. 'Broad St'에 대한 항목만 사용하겠습니다.
+'Broad St' 지하철역의 바이너리 지오메트리 값을 가져와 `ST_Equals`로 일치 여부를 확인해 보겠습니다.
 
 ```sql
 SELECT name, geom
@@ -27,144 +31,154 @@ FROM nyc_subway_stations
 WHERE name = 'Broad St';
 ```
 
-    name   |                      geom
-    ----------+---------------------------------------------------
-    Broad St | 0101000020266900000EEBD4CF27CF2141BC17D69516315141
-
-그런 다음 형상 표현을 다시 `ST_Equals` 테스트에 연결합니다.
+```text
+   name   |                      geom
+----------+---------------------------------------------------
+ Broad St | 0101000020266900000EEBD4CF27CF2141BC17D69516315141
+```
 
 ```sql
 SELECT name
 FROM nyc_subway_stations
 WHERE ST_Equals(
   geom,
-  '0101000020266900000EEBD4CF27CF2141BC17D69516315141');
+  '0101000020266900000EEBD4CF27CF2141BC17D69516315141'
+);
 ```
 
-    Broad St
+```text
+Broad St
+```
 
-> [!NOTE]
-> 점의 표현은 사람이 읽을 수 있는 수준은 아니지만(`0101000020266900000EEBD4CF27CF2141BC17D69516315141`) 좌표 값을 정확하게 표현했습니다. 동등성 테스트를 위해서는 정확한 좌표를 사용하는 것이 필요합니다.
+---
 
-## ST_Intersects, ST_Disjoint, ST_Crosses 및 ST_Overlaps
+## 2. ST_Intersects, ST_Disjoint, ST_Crosses, ST_Overlaps
 
-`ST_Intersects`, `ST_Crosses` 및 `ST_Overlaps`는 형상의 내부가 교차하는지 여부를 테스트합니다.
+### ST_Intersects
+`ST_Intersects(geometry A, geometry B)`는 두 지오메트리가 공간의 일부를 조금이라도 공유(경계가 맞닿거나 내부가 겹치는 경우)하면 `TRUE`를 반환합니다.
 
 ![이미지](spatial_relationships/st_intersects.png)
 
-`ST_Intersects(geometry A, geometry B)`는 두 모양에 공통 공간이 있는 경우, 즉 경계나 내부가 교차하는 경우 t(TRUE)를 반환합니다.
+### ST_Disjoint
+`ST_Disjoint(geometry A, geometry B)`는 `ST_Intersects`의 정반대입니다. 두 지오메트리가 서로 완전히 떨어져 있어 어떤 공간도 공유하지 않을 때 `TRUE`를 반환합니다.
 
 ![이미지](spatial_relationships/st_disjoint.png)
 
-ST_Intersects의 반대는 `ST_Disjoint(geometry A , geometry B)`입니다. 두 개의 기하학이 분리되어 있으면 교차하지 않으며 그 반대도 마찬가지입니다. 실제로 교차 테스트는 공간적으로 인덱싱될 수 있지만 분리 테스트는 그렇지 않기 때문에 "해리"를 테스트하는 것보다 "교차하지 않음"을 테스트하는 것이 더 효율적인 경우가 많습니다.
+> [!TIP]
+> 실무에서는 `ST_Disjoint` 대신 `NOT ST_Intersects`를 사용하는 것이 훨씬 효율적입니다. `ST_Intersects`는 공간 인덱스(GiST)를 통해 고속으로 처리되지만, `ST_Disjoint`는 인덱스로 후보군을 좁히기 어렵기 때문입니다.
+
+### ST_Crosses
+`ST_Crosses(geometry A, geometry B)`는 두 지오메트리가 교차하여 생성된 교집합의 차원이 두 지오메트리 중 큰 차원보다 1 작고, 교집합이 두 객체의 내부에 위치할 때 `TRUE`를 반환합니다 (예: 선과 선이 십자로 교차하여 점이 생기는 경우, 선이 폴리곤 내부를 관통하는 경우).
 
 ![이미지](spatial_relationships/st_crosses.png)
 
-다중점/다각형, 다중점/선스트링, 선스트링/선스트링, 선스트링/다각형 및 선스트링/다중다각형 비교의 경우, 교차로 인해 치수가 두 소스 도형의 최대 치수보다 1 작은 도형이 생성되고 교차 세트가 두 소스 도형의 내부에 있는 경우 `ST_Crosses(geometry A, geometry B)`는 t(TRUE)를 반환합니다.
+### ST_Overlaps
+`ST_Overlaps(geometry A, geometry B)`는 동일한 차원의 두 지오메트리(폴리곤과 폴리곤, 또는 선과 선)가 서로 겹치지만 어느 한쪽이 다른 쪽을 완전히 포함하지는 않을 때 `TRUE`를 반환합니다.
 
 ![이미지](spatial_relationships/st_overlaps.png)
 
-`ST_Overlaps(geometry A, geometry B)`는 동일한 치수의 두 Geometry를 비교하고 교차 세트로 인해 둘 다와 다르지만 동일한 치수의 Geometry가 생성되는 경우 TRUE를 리턴합니다.
-
-Broad Street 지하철 역을 선택하고 `ST_Intersects` 함수를 사용하여 주변 지역을 결정해 보겠습니다.
-
-```sql
-SELECT name, ST_AsText(geom)
-FROM nyc_subway_stations
-WHERE name = 'Broad St';
-```
-
-    POINT(583571 4506714)
+#### 교차 분석 예시: Broad St 역이 위치한 근린지역 찾기
 
 ```sql
 SELECT name, boroname
 FROM nyc_neighborhoods
-WHERE ST_Intersects(geom, ST_GeomFromText('POINT(583571 4506714)',26918));
+WHERE ST_Intersects(
+  geom,
+  ST_GeomFromText('POINT(583571 4506714)', 26918)
+);
 ```
 
-    name        | boroname
-    --------------------+-----------
-    Financial District | Manhattan
+```text
+        name        | boroname
+--------------------+-----------
+ Financial District | Manhattan
+```
 
-## ST_터치
+---
 
-`ST_Touches`는 두 개의 형상이 경계에서 접촉하지만 내부에서는 교차하지 않는지 테스트합니다.
+## 3. ST_Touches
+
+`ST_Touches(geometry A, geometry B)`는 두 지오메트리의 경계(Boundary)는 서로 맞닿아 있지만 내부(Interior)는 전혀 겹치지 않을 때 `TRUE`를 반환합니다.
 
 ![이미지](spatial_relationships/st_touches.png)
 
-`ST_Touches(geometry A, geometry B)`는 기하학의 경계 중 하나가 교차하거나 기하학의 내부 중 하나만 다른 경계와 교차하는 경우 TRUE를 리턴합니다.
+---
 
-## ST_Within 및 ST_Contains
+## 4. ST_Within 및 ST_Contains
 
-`ST_Within` 및 `ST_Contains`는 한 형상이 다른 형상 내에 완전히 있는지 여부를 테스트합니다.
+`ST_Within`과 `ST_Contains`는 한 지오메트리가 다른 지오메트리 내부에 완전히 포함되어 있는지를 검사합니다.
 
 ![이미지](spatial_relationships/st_within.png)
 
-`ST_Within(geometry A , geometry B)`는 첫 번째 기하학이 완전히 두 번째 기하학 내에 있는 경우 TRUE를 리턴합니다. ST_Within은 ST_Contains의 정반대 결과를 테스트합니다.
+- `ST_Within(geometry A, geometry B)`: 지오메트리 A가 지오메트리 B 내부에 완전히 들어있는 경우 `TRUE`를 반환합니다.
+- `ST_Contains(geometry A, geometry B)`: 지오메트리 A가 지오메트리 B를 완전히 포함하는 경우 `TRUE`를 반환합니다 (`ST_Within`과 인자 순서가 반대).
 
-`ST_Contains(geometry A, geometry B)`는 두 번째 기하학이 첫 번째 기하학에 완전히 포함된 경우 TRUE를 반환합니다.
+---
 
-## ST_Distance 및 ST_DWithin
+## 5. ST_Distance 및 ST_DWithin
 
-매우 일반적인 GIS 질문은 "이 다른 항목의 거리 X 내에 있는 모든 항목을 찾는 것"입니다.
+거리 기반 공간 질의는 GIS 분석에서 가장 빈번하게 사용됩니다.
 
-`ST_Distance(geometry A, geometry B)`는 두 지오메트리 사이의 *최단* 거리를 계산하여 부동소수점 값으로 반환합니다. 객체 사이의 실제 거리를 구할 때 유용합니다.
+### ST_Distance
+`ST_Distance(geometry A, geometry B)`는 두 지오메트리 간의 **최단 직교 거리**를 계산하여 부동소수점 실수값으로 반환합니다 (투영 좌표계의 단위인 미터).
 
 ```sql
 SELECT ST_Distance(
   ST_GeometryFromText('POINT(0 5)'),
-  ST_GeometryFromText('LINESTRING(-2 2, 2 2)'));
+  ST_GeometryFromText('LINESTRING(-2 2, 2 2)')
+);
 ```
 
-    3
+```text
+3
+```
 
-두 객체가 서로의 거리 내에 있는지 테스트하기 위해 `ST_DWithin` 함수는 인덱스 가속 참/거짓 테스트를 제공합니다. 이는 "도로의 500미터 완충 내에 나무가 몇 그루나 있습니까?"와 같은 질문에 유용합니다. 실제 버퍼를 계산할 필요는 없으며 거리 관계만 테스트하면 됩니다.
+### ST_DWithin (인덱스 가속 반경 검색)
+"특정 객체로부터 반경 X미터 이내에 있는 모든 객체 찾기"와 같은 조건을 판별할 때 `ST_DWithin(geometry A, geometry B, distance)`을 사용합니다.
 
 ![이미지](spatial_relationships/st_dwithin.png)
 
-Broad Street 지하철 역을 다시 이용하면 지하철 정류장 근처(10미터 이내)의 거리를 찾을 수 있습니다.
+> [!IMPORTANT]
+> `ST_Distance(A, B) < distance` 대신 반드시 **`ST_DWithin(A, B, distance)`**을 사용해야 합니다. `ST_DWithin`은 공간 인덱스(GiST)를 통해 바운딩 박스를 자동으로 확장하여 검색 대상을 고속으로 필터링하므로 수천 배 이상 빠릅니다.
+
+#### 예시: Broad St 지하철역 반경 10m 이내의 도로 검색
 
 ```sql
 SELECT name
 FROM nyc_streets
 WHERE ST_DWithin(
-        geom,
-        ST_GeomFromText('POINT(583571 4506714)',26918),
-        10
-      );
+  geom,
+  ST_GeomFromText('POINT(583571 4506714)', 26918),
+  10
+);
 ```
 
-    name
-    --------------
-    Wall St
-    Broad St
-    Nassau St
+```text
+   name
+-----------
+ Wall St
+ Broad St
+ Nassau St
+```
 
-그리고 그 답을 지도로 확인할 수 있습니다. Broad St 역은 실제로 Wall, Broad 및 Nassau Streets의 교차점에 있습니다.
+실제 지도를 확인해 보면 Broad St 지하철역은 Wall St, Broad St, Nassau St가 만나는 교차로에 위치해 있음을 알 수 있습니다.
 
 ![이미지](spatial_relationships/broad_st.jpg)
 
-## 기능 목록
+---
 
-[ST_Contains(기하학 A, 기하학 B)](http://postgis.net/docs/ST_Contains.html): B의 포인트가 A의 외부에 있지 않고 B 내부의 최소 하나의 포인트가 A의 내부에 있는 경우에만 true를 반환합니다.
+## 함수 목록 (Function List)
 
-[ST_Crosses(기하학 A, 기하학 B)](http://postgis.net/docs/ST_Crosses.html): 제공된 기하학에 공통된 내부 점이 전부는 아니지만 일부가 있는 경우 TRUE를 반환합니다.
-
-[ST_Disjoint(기하학 A , 기하학 B)](http://postgis.net/docs/ST_Disjoint.html): 기하학이 "공간적으로 교차"하지 않는 경우, 즉 공간을 함께 공유하지 않는 경우 TRUE를 반환합니다.
-
-[ST_Distance(기하학 A, 기하학 B)](http://postgis.net/docs/ST_Distance.html): 두 기하학 사이의 2차원 직교 최소 거리(공간 참조 기준)를 투영 단위로 반환합니다.
-
-[ST_DWithin(기하학 A, 기하학 B, 반경)](http://postgis.net/docs/ST_DWithin.html): 기하학이 서로 지정된 거리(반경) 내에 있는 경우 true를 반환합니다.
-
-[ST_Equals(기하학 A, 기하학 B)](http://postgis.net/docs/ST_Equals.html): 주어진 기하학이 동일한 기하학을 나타내는 경우 true를 반환합니다. 방향성은 무시됩니다.
-
-[ST_Intersects(geometry A, geometry B)](http://postgis.net/docs/ST_Intersects.html): 두 지오메트리 또는 지오그래피가 공간의 일부를 공유하면 `TRUE`, 서로 분리되어 있으면 `FALSE`를 반환합니다.
-
-[ST_Overlaps(기하학 A, 기하학 B)](http://postgis.net/docs/ST_Overlaps.html): 기하학이 공간을 공유하고 동일한 차원이지만 서로 완전히 포함되지 않은 경우 TRUE를 반환합니다.
-
-[ST_Touches(기하학 A, 기하학 B)](http://postgis.net/docs/ST_Touches.html): 기하학에 공통 점이 하나 이상 있지만 내부가 교차하지 않는 경우 TRUE를 반환합니다.
-
-[ST_Within(기하학 A , 기하학 B)](http://postgis.net/docs/ST_Within.html): 기하학 A가 완전히 기하학 B 내부에 있는 경우 true를 반환합니다.
+- [ST_Contains(geometry A, geometry B)](http://postgis.net/docs/ST_Contains.html): B의 어떤 점도 A의 외부에 있지 않고, B 내부의 점이 A 내부와 공유될 때 `TRUE`를 반환합니다 (A가 B를 완전히 포함).
+- [ST_Crosses(geometry A, geometry B)](http://postgis.net/docs/ST_Crosses.html): 두 지오메트리의 내부가 교차하지만 한쪽이 다른 쪽을 포함하지 않는 경우 `TRUE`를 반환합니다.
+- [ST_Disjoint(geometry A, geometry B)](http://postgis.net/docs/ST_Disjoint.html): 두 지오메트리가 어떤 공간도 공유하지 않고 완전히 분리되어 있을 때 `TRUE`를 반환합니다.
+- [ST_Distance(geometry A, geometry B)](http://postgis.net/docs/ST_Distance.html): 두 지오메트리 사이의 최단 2차원 거리를 투영 좌표계 단위로 반환합니다.
+- [ST_DWithin(geometry A, geometry B, radius)](http://postgis.net/docs/ST_DWithin.html): 두 지오메트리 간의 최단 거리가 지정된 반경(radius) 이내이면 공간 인덱스를 활용하여 빠르게 `TRUE`를 반환합니다.
+- [ST_Equals(geometry A, geometry B)](http://postgis.net/docs/ST_Equals.html): 두 지오메트리가 공간적으로 동일한 구조와 위치를 가질 때 `TRUE`를 반환합니다.
+- [ST_Intersects(geometry A, geometry B)](http://postgis.net/docs/ST_Intersects.html): 두 지오메트리가 공간의 일부를 조금이라도 공유하면 `TRUE`, 완전히 분리되어 있으면 `FALSE`를 반환합니다.
+- [ST_Overlaps(geometry A, geometry B)](http://postgis.net/docs/ST_Overlaps.html): 동일한 차원의 두 지오메트리가 일부 겹치지만 서로를 완전히 포함하지 않는 경우 `TRUE`를 반환합니다.
+- [ST_Touches(geometry A, geometry B)](http://postgis.net/docs/ST_Touches.html): 두 지오메트리의 경계가 서로 접촉하고 내부는 교차하지 않을 때 `TRUE`를 반환합니다.
+- [ST_Within(geometry A, geometry B)](http://postgis.net/docs/ST_Within.html): 지오메트리 A가 지오메트리 B 내부에 완전히 포함되어 있을 때 `TRUE`를 반환합니다.
 
 
 ---

@@ -1,110 +1,124 @@
-# 14. 조인 연습 (Joins Exercises)
+# 14. 공간 조인 실습 (Spatial Joins Exercises)
 
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/joins_exercises.html>](https://postgis.net/workshops/postgis-intro/joins_exercises.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
-앞에서 살펴본 함수 가운데 이번 실습에 유용한 것들을 정리하면 다음과 같습니다.
+앞서 학습한 공간 조인 기법과 집계 함수를 활용하여 다음 실습 문제를 직접 해결해 보세요.
 
-- `sum(expression)`: 레코드 집합에 있는 값의 합계를 반환하는 집계 함수
-- `count(expression)`: 레코드 집합의 레코드 수를 반환하는 집계 함수
-- `ST_Area(geometry)`는 다각형의 면적을 반환합니다.
-- `ST_AsText(geometry)`는 WKT `text`를 반환합니다.
-- `ST_Contains(geometry A, geometry B)`는 기하학 A에 기하학 B가 포함된 경우 true를 반환합니다.
-- `ST_Distance(geometry A, geometry B)`는 형상 A와 형상 B 사이의 최소 거리를 반환합니다.
-- `ST_DWithin(geometry A, geometry B, radius)`는 형상 A가 형상 B로부터 반경 거리 이하인 경우 true를 반환합니다.
-- `ST_GeomFromText(text)`는 `geometry`를 반환합니다.
-- `ST_Intersects(geometry A, geometry B)`는 기하학 A가 기하학 B와 교차하는 경우 true를 반환합니다.
-- `ST_Length(linestring)`는 선스트링의 길이를 반환합니다.
-- `ST_Touches(geometry A, geometry B)`는 기하학 A의 경계가 기하학 B에 닿으면 true를 반환합니다.
-- `ST_Within(geometry A, geometry B)`는 기하학 A가 기하학 B 내에 있는 경우 true를 반환합니다.
+### 실습 참조 함수 요약
+- `sum(expression)`: 값 집합의 총합계
+- `count(expression)`: 레코드 개수
+- `ST_Area(geometry)`: 폴리곤의 면적 계산
+- `ST_Contains(geometry A, geometry B)`: A가 B를 완전히 포함하는지 검사
+- `ST_Distance(geometry A, geometry B)`: 두 지오메트리 간 최단 거리 계산
+- `ST_DWithin(geometry A, geometry B, radius)`: 두 지오메트리가 지정된 반경 이내에 있는지 고속 검사
+- `ST_Intersects(geometry A, geometry B)`: 두 지오메트리가 공간을 공유(교차/접촉/포함)하는지 검사
+- `ST_Length(linestring)`: 선의 길이 계산
+- `ST_Touches(geometry A, geometry B)`: 두 지오메트리의 경계가 맞닿아 있는지 검사
 
-또한 사용 가능한 테이블을 기억하십시오.
+### 실습 대상 테이블
+- `nyc_census_blocks`: `blkid`, `popn_total`, `boroname`, `geom`
+- `nyc_streets`: `name`, `type`, `geom`
+- `nyc_subway_stations`: `name`, `routes`, `geom`
+- `nyc_neighborhoods`: `name`, `boroname`, `geom`
 
-- `nyc_census_blocks`
-  - 이름, popn_total, 보로나메, 검
-- `nyc_streets`
-  - 이름, 유형, 지리
-- `nyc_subway_stations`
-  - 이름, 경로, 지리
-- `nyc_neighborhoods`
-  - 이름, 보로나메, 검
+---
 
-## 연습
+## 연습 문제 및 정답
 
-- **'리틀 이탈리아'에는 어떤 지하철역이 있나요? 어떤 지하철 노선에 있나요?**
+### 1. 'Little Italy' 근린지역에는 어떤 지하철역이 있으며, 어느 지하철 노선이 지나갑니까?
 
-  ```sql
-  SELECT s.name, s.routes
-  FROM nyc_subway_stations AS s
-  JOIN nyc_neighborhoods AS n
+```sql
+SELECT s.name AS station_name, s.routes
+FROM nyc_subway_stations AS s
+JOIN nyc_neighborhoods AS n
   ON ST_Contains(n.geom, s.geom)
-  WHERE n.name = 'Little Italy';
-  ```
+WHERE n.name = 'Little Italy';
+```
 
-      name    | routes
-      -----------+--------
-      Spring St | 6
+```text
+station_name | routes
+-------------+--------
+Spring St    | 6
+```
 
-- **6번 열차가 운행하는 지역은 모두 어디입니까?** (힌트: `nyc_subway_stations` 테이블의 `routes` 열에는 'B,D,6,V' 및 'C,6'과 같은 값이 있습니다.)
+---
 
-  ```sql
-  SELECT DISTINCT n.name, n.boroname
-  FROM nyc_subway_stations AS s
-  JOIN nyc_neighborhoods AS n
+### 2. 6번 지하철 노선(6-Train)이 경유하는 모든 근린지역과 자치구는 어디입니까?
+
+*(힌트: `nyc_subway_stations` 테이블의 `routes` 컬럼에는 `B,D,6,V`, `4,5,6`과 같은 문자열이 저장되어 있습니다.)*
+
+```sql
+SELECT DISTINCT n.name AS neighborhood, n.boroname AS borough
+FROM nyc_subway_stations AS s
+JOIN nyc_neighborhoods AS n
   ON ST_Contains(n.geom, s.geom)
-  WHERE strpos(s.routes,'6') > 0;
-  ```
+WHERE strpos(s.routes, '6') > 0;
+```
 
-      name        | boroname
-      --------------------+-----------
-      Midtown            | Manhattan
-      Hunts Point        | The Bronx
-      Gramercy           | Manhattan
-      Little Italy       | Manhattan
-      Financial District | Manhattan
-      South Bronx        | The Bronx
-      Yorkville          | Manhattan
-      Murray Hill        | Manhattan
-      Mott Haven         | The Bronx
-      Upper East Side    | Manhattan
-      Chinatown          | Manhattan
-      East Harlem        | Manhattan
-      Greenwich Village  | Manhattan
-      Parkchester        | The Bronx
-      Soundview          | The Bronx
+```text
+    neighborhood    |  borough
+--------------------+-----------
+ Chinatown          | Manhattan
+ East Harlem        | Manhattan
+ Financial District | Manhattan
+ Gramercy           | Manhattan
+ Greenwich Village  | Manhattan
+ Hunts Point        | The Bronx
+ Little Italy       | Manhattan
+ Midtown            | Manhattan
+ Mott Haven         | The Bronx
+ Murray Hill        | Manhattan
+ Parkchester        | The Bronx
+ Soundview          | The Bronx
+ South Bronx        | The Bronx
+ Upper East Side    | Manhattan
+ Yorkville          | Manhattan
+```
 
-  > [!NOTE]
-  > 우리는 `DISTINCT` 키워드를 사용하여 한 동네에 지하철 역이 두 개 이상 있는 결과 집합에서 중복된 값을 제거했습니다.
+> [!NOTE]
+> `DISTINCT` 키워드를 사용하여 하나의 동네 안에 지하철역이 여러 개 있더라도 중복 없이 동네 목록을 깔끔하게 추출했습니다.
 
-- **9/11 이후 '배터리 파크' 인근 지역은 며칠 동안 출입이 통제되었습니다. 얼마나 많은 사람들이 대피해야 했나요?**
+---
 
-  ```sql
-  SELECT Sum(popn_total)
-  FROM nyc_neighborhoods AS n
-  JOIN nyc_census_blocks AS c
+### 3. 9/11 테러 직후 'Battery Park' 근린지역이 며칠간 통제되었을 때, 대피해야 했던 해당 지역 거주 인구는 총 몇 명입니까?
+
+```sql
+SELECT sum(c.popn_total) AS evacuated_population
+FROM nyc_neighborhoods AS n
+JOIN nyc_census_blocks AS c
   ON ST_Intersects(n.geom, c.geom)
-  WHERE n.name = 'Battery Park';
-  ```
+WHERE n.name = 'Battery Park';
+```
 
-      17153
+```text
+17153
+```
 
-- **인구 밀도(인/km2)가 가장 높은 지역은 어디입니까?**
+---
 
-  ```sql
-  SELECT
-    n.name,
-    Sum(c.popn_total) / (ST_Area(n.geom) / 1000000.0) AS popn_per_sqkm
-  FROM nyc_census_blocks AS c
-  JOIN nyc_neighborhoods AS n
+### 4. 뉴욕시에서 인구 밀도($\text{명}/\text{km}^2$)가 가장 높은 근린지역 상위 2곳은 어디입니까?
+
+*(힌트: $1\text{km}^2 = 1,000,000\text{m}^2$입니다.)*
+
+```sql
+SELECT
+  n.name AS neighborhood,
+  sum(c.popn_total) / (ST_Area(n.geom) / 1000000.0) AS popn_per_sqkm
+FROM nyc_census_blocks AS c
+JOIN nyc_neighborhoods AS n
   ON ST_Intersects(c.geom, n.geom)
-  GROUP BY n.name, n.geom
-  ORDER BY popn_per_sqkm DESC LIMIT 2;
-  ```
+GROUP BY n.name, n.geom
+ORDER BY popn_per_sqkm DESC
+LIMIT 2;
+```
 
-      name       |  popn_per_sqkm
-      -------------------+------------------
-      North Sutton Area | 68435.13283772678
-      East Village      | 50404.48341332535
+```text
+   neighborhood    |  popn_per_sqkm
+-------------------+------------------
+ North Sutton Area | 68435.13283772678
+ East Village      | 50404.48341332535
+```
 
 
 ---

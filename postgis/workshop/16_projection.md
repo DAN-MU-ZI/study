@@ -3,149 +3,111 @@
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/projection.html>](https://postgis.net/workshops/postgis-intro/projection.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
-지구는 평평하지 않으므로 종이 지도나 컴퓨터 화면에 왜곡 없이 옮길 수 없습니다. 이 때문에 저마다 장단점이 있는 다양한 투영법이 만들어졌습니다. 어떤 투영은 면적을 보존하여 객체의 상대적 크기를 유지하고, 메르카토르 투영처럼 각도를 보존하는 투영도 있습니다. 여러 종류의 왜곡을 적절히 절충하는 투영도 있습니다. 모든 투영은 구형에 가까운 지구를 평면 데카르트 좌표계로 변환하며, 적합한 투영은 데이터의 용도에 따라 달라집니다.
+지구는 둥근 회전타원체(Spheroid/Geoid) 형태이므로, 왜곡 없이 2차원 평면 지도나 모니터 화면에 그대로 옮길 수 없습니다. 이 때문에 용도와 지역에 따라 다양한 **지도 투영법(Map Projections)**이 개발되었습니다.
 
-NYC 데이터를 불러올 때 이미 투영을 접했습니다. 앞에서 혼동하기 쉬운 SRID 26918을 살펴본 것을 기억하세요. 때로는 서로 다른 공간 참조 체계 사이에서 데이터를 변환, 즉 재투영해야 합니다. PostGIS에서는 `ST_Transform(geometry, srid)`으로 데이터를 재투영하고, `ST_SRID(geometry)`와 `ST_SetSRID(geometry, srid)`로 지오메트리의 SRID를 관리합니다.
+- **등적 투영(Equal-Area)**: 면적의 비율을 정확히 보존합니다 (면적 비교 및 통계 분석에 적합).
+- **정각 투영(Conformal)**: 각도와 형태를 국소적으로 보존합니다 (메르카토르 투영, 항해 및 네비게이션에 적합).
+- **등거리 투영(Equidistant)**: 특정 기준점으로부터의 거리를 정확히 보존합니다.
 
-`ST_SRID` 함수를 사용하여 데이터의 SRID를 확인할 수 있습니다.
+모든 투영법은 구면 좌표(경도/위도)를 평면 직교 좌표(X, Y)로 변환하며, 최적의 투영법은 데이터의 지리적 범위와 분석 목적에 따라 결정됩니다.
+
+PostGIS에서는 다음과 같은 주요 함수로 좌표계를 관리하고 변환합니다.
+
+- `ST_Transform(geometry, target_srid)`: 지오메트리의 좌표를 다른 공간 참조 체계(SRID)로 재투영 변환합니다.
+- `ST_SRID(geometry)`: 지오메트리에 설정된 SRID 번호를 반환합니다.
+- `ST_SetSRID(geometry, srid)`: 지오메트리의 좌표값은 그대로 둔 채 메타데이터인 SRID 번호만 변경합니다.
+
+---
+
+## spatial_ref_sys 테이블의 좌표계 정의 구조
+
+지오메트리의 SRID를 확인해 보겠습니다.
 
 ```sql
 SELECT ST_SRID(geom) FROM nyc_streets LIMIT 1;
 ```
 
-    26918
+```text
+26918
+```
 
-그렇다면 "26918"은 어떻게 정의되어 있을까요? [공간 데이터 불러오기](05_loading_data.md)에서 보았듯이 정의는 `spatial_ref_sys` 테이블에 들어 있습니다. 여기에는 **두 가지** 정의가 있습니다. WKT(Well-Known Text) 정의는 `srtext` 열에, "proj.4" 형식의 정의는 `proj4text` 열에 저장됩니다.
+`spatial_ref_sys` 테이블에서 SRID `26918`의 상세 정의를 조회해 봅니다.
 
 ```sql
 SELECT * FROM spatial_ref_sys WHERE srid = 26918;
 ```
 
-PostGIS 재투영 엔진은 `spatial_ref_sys` 테이블에서 최상의 투영을 찾으려고 시도합니다.
+PostGIS의 재투영 엔진(PROJ 라이브러리 연동)은 다음 우선순위로 투영 정의를 해석합니다.
 
-- **auth_name / auth_srid**: PROJ가 내부 카탈로그에서 유효한 기관명과 기관 SRID를 찾으면 이를 이용해 투영 정의를 생성합니다.
-- **srtext**: PROJ가 `srtext`의 정의를 해석할 수 있으면 이를 사용합니다.
-- **proj4text**: 마지막으로 PROJ는 `proj4text`를 해석합니다.
+1. **`auth_name` / `auth_srid`**: PROJ 내부 카탈로그에서 공식 기관명(EPSG 등)과 식별 코드를 찾아 투영 파라미터를 구성합니다.
+2. **`srtext`**: 표준 OGC WKT 형식의 좌표계 정의 문자열을 파싱합니다.
+3. **`proj4text`**: 레거시 PROJ.4 파라미터 문자열을 파싱합니다.
 
-이처럼 여러 정의 방식을 지원하므로 유효한 `srtext` 또는 `proj4text` 문자열만 있으면 PostGIS에 새 투영을 추가할 수 있습니다. 널리 쓰이는 기관명과 코드의 조합은 기본적으로 테이블에 등록되어 있습니다.
+> [!TIP]
+> 커스텀 사용자 정의 좌표계를 등록할 때는 `srtext` 컬럼을 충실히 작성해야 합니다. GeoServer, QGIS, FME 등 외부 오픈 소스 및 상용 GIS 도구들이 대부분 `srtext`의 WKT 정의를 읽어 좌표계를 인식하기 때문입니다.
 
-사용자 정의 투영을 생성할 때 선택 사항이 있는 경우 `srtext` 열을 작성하세요. 해당 열은 [GeoServer](http://geoserver.org), [QGIS](https://qgis.org), [FME](http://www.safe.com/) 등과 같은 외부 프로그램에서도 사용되기 때문입니다.
+---
 
-## 데이터 비교
+## 서로 다른 SRID 간의 비교 오류
 
-좌표와 SRID를 종합하면 지구 상의 위치를 정의합니다. SRID가 없으면 좌표는 추상적인 개념일 뿐입니다. "데카르트" 좌표계는 지구 표면에 배치된 "평평한" 좌표계로 정의됩니다. PostGIS 기능은 이러한 평면에서 작동하기 때문에 비교 작업을 수행하려면 두 도형이 동일한 SRID에 표시되어야 합니다.
+모든 공간 연산(`ST_Intersects`, `ST_Equals`, `ST_Distance` 등)을 수행하려면 비교 대상이 되는 두 지오메트리가 반드시 **동일한 SRID**를 가져야 합니다.
 
-서로 다른 SRID를 사용하여 형상을 입력하면 오류가 발생합니다.
+SRID가 서로 다른 지오메트리를 비교하면 데이터베이스 오류가 발생합니다.
 
 ```sql
 SELECT ST_Equals(
-         ST_GeomFromText('POINT(0 0)', 4326),
-         ST_GeomFromText('POINT(0 0)', 26918)
-         );
+  ST_GeomFromText('POINT(0 0)', 4326),
+  ST_GeomFromText('POINT(0 0)', 26918)
+);
 ```
 
-    ERROR:  ST_Equals: Operation on mixed SRID geometries (Point, 4326) != (Point, 26918)
-
-> [!NOTE]
-> 즉각적인 변환을 위해 `ST_Transform`를 사용하는 것에 너무 만족하지 않도록 주의하십시오. 공간 인덱스는 저장된 도형의 SRID를 사용하여 구축됩니다. 다른 SRID에서 비교가 수행되면 공간 인덱스가 (종종) 사용되지 않습니다. 데이터베이스의 모든 테이블에 대해 **하나의 SRID**를 선택하는 것이 가장 좋습니다. 외부 애플리케이션에서 데이터를 읽거나 쓸 때만 변환 기능을 사용하십시오.
-
-## 데이터 변환
-
-SRID 26918에 대한 proj4 정의로 돌아가면 작업 투영이 구역 18의 UTM(Universal Transverse Mercator)이고 측정 단위가 미터임을 알 수 있습니다.
-
-```sql
-SELECT srtext FROM spatial_ref_sys WHERE srid = 26918;
+```text
+ERROR: ST_Equals: Operation on mixed SRID geometries (Point, 4326) != (Point, 26918)
 ```
 
-    PROJCS["NAD83 / UTM zone 18N",
-      GEOGCS["NAD83",
-        DATUM["North_American_Datum_1983",
-          SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],
-          TOWGS84[0,0,0,0,0,0,0],
-          AUTHORITY["EPSG","6269"]],
-        PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],
-        UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],
-        AUTHORITY["EPSG","4269"]],
-      PROJECTION["Transverse_Mercator"],
-      PARAMETER["latitude_of_origin",0],
-      PARAMETER["central_meridian",-75],
-      PARAMETER["scale_factor",0.9996],
-      PARAMETER["false_easting",500000],
-      PARAMETER["false_northing",0],
-      UNIT["metre",1,AUTHORITY["EPSG","9001"]],
-      AXIS["Easting",EAST],AXIS["Northing",NORTH],
-      AUTHORITY["EPSG","26918"]]
+> [!IMPORTANT]
+> 쿼리 실행 시마다 `ST_Transform`으로 즉석 변환하는 것은 지양해야 합니다. 공간 인덱스는 테이블에 저장된 원래 SRID를 기준으로 구축되므로, `WHERE` 절에서 컬럼을 `ST_Transform`으로 감싸면 공간 인덱스를 활용할 수 없어 성능이 급격히 저하됩니다. 데이터베이스 내의 공간 테이블들은 가급적 **통일된 단일 SRID**로 저장하고, 외부 시스템과 연동할 때만 변환하는 것이 최선입니다.
 
-작업 투영의 일부 데이터를 "경도/위도"라고도 알려진 지리적 좌표로 변환해 보겠습니다.
+---
 
-하나의 SRID에서 다른 SRID로 데이터를 변환하려면 먼저 형상에 유효한 SRID가 있는지 확인해야 합니다. 유효한 SRID를 이미 확인했으므로 다음으로 변환할 투영의 SRID가 필요합니다. 즉, 지리적 좌표의 SRID는 무엇입니까?
+## 좌표계 변환 실습 (ST_Transform)
 
-지리적 좌표에 대한 가장 일반적인 SRID는 4326이며, 이는 "WGS84 회전 타원체의 경도/위도"에 해당합니다. 여기에서 정의를 볼 수 있습니다.
-
-> <https://epsg.io/4326>
-
-`spatial_ref_sys` 테이블에서 정의를 가져올 수도 있습니다.
+SRID `26918` (NAD83 / UTM zone 18N, 미터 단위 투영 좌표계)로 저장된 'Broad St' 지하철역의 위치를 전 세계 표준 경위도 좌표계인 **EPSG:4326 (WGS84)**으로 변환해 보겠습니다.
 
 ```sql
-SELECT srtext FROM spatial_ref_sys WHERE srid = 4326;
-```
-
-    GEOGCS["WGS 84",
-      DATUM["WGS_1984",
-        SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],
-        AUTHORITY["EPSG","6326"]],
-      PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],
-      UNIT["degree",0.01745329251994328,AUTHORITY["EPSG","9122"]],
-      AUTHORITY["EPSG","4326"]]
-
-'Broad St' 지하철역의 좌표를 지리 정보로 변환해 보겠습니다.
-
-```sql
-SELECT ST_AsText(ST_Transform(geom,4326))
+SELECT ST_AsText(ST_Transform(geom, 4326))
 FROM nyc_subway_stations
 WHERE name = 'Broad St';
 ```
 
-    POINT(-74.01067146887341 40.70710481558761)
-
-SRID를 지정하지 않고 데이터를 로드하거나 새 지오메트리를 생성하는 경우 SRID 값은 0이 됩니다. `geometries`에서 `geometries` 테이블을 생성할 때 SRID를 지정하지 않았다는 점을 기억하세요. 데이터베이스를 쿼리하는 경우 모든 `nyc_` 테이블의 SRID는 26918이고 `geometries` 테이블의 기본값은 0입니다.
-
-테이블의 SRID 할당을 보려면 데이터베이스의 `geometry_columns` 테이블을 쿼리하세요.
-
-```sql
-SELECT f_table_name AS name, srid
-FROM geometry_columns;
+```text
+POINT(-74.01067146887341 40.70710481558761)
 ```
 
-    name         | srid
-    ---------------------+-------
-    nyc_census_blocks   | 26918
-    nyc_homicides       | 26918
-    nyc_neighborhoods   | 26918
-    nyc_streets         | 26918
-    nyc_subway_stations | 26918
-    geometries          |     0
+출력 결과를 보면 서경 $74.01^\circ$, 북위 $40.707^\circ$라는 직관적인 위경도 좌표로 변환된 것을 확인할 수 있습니다.
 
-그러나 좌표의 SRID가 무엇인지 알고 있다면 형상에서 `ST_SetSRID`를 사용하여 사후에 설정할 수 있습니다. 그런 다음 기하학을 다른 시스템으로 변환할 수 있습니다.
+### SRID가 없는 지오메트리에 SRID 부여 후 변환
+
+SRID가 0(Unknown)으로 생성된 지오메트리는 먼저 `ST_SetSRID`로 원래 좌표계를 선언해 준 다음 `ST_Transform`을 호출해야 합니다.
 
 ```sql
 SELECT ST_AsText(
-    ST_Transform(
-      ST_SetSRID(geom,26918),
-      4326)
-    )
-  FROM geometries;
+  ST_Transform(
+    ST_SetSRID(geom, 26918),
+    4326
+  )
+)
+FROM geometries;
 ```
 
-## 기능 목록
+---
 
-[ST_AsText](http://postgis.net/docs/ST_AsText.html): SRID 메타데이터 없이 도형/지리의 WKT(Well-Known Text) 표현을 반환합니다.
+## 함수 목록 (Function List)
 
-[ST_SetSRID(geometry, srid)](http://postgis.net/docs/ST_SetSRID.html): 기하학의 SRID를 특정 정수 값으로 설정합니다.
-
-[ST_SRID(geometry)](http://postgis.net/docs/ST_SRID.html): Spatial_ref_sys 테이블에 정의된 ST_Geometry에 대한 공간 참조 식별자를 반환합니다.
-
-[ST_Transform(geometry, srid)](http://postgis.net/docs/ST_Transform.html): 정수 매개변수가 참조하는 SRID로 좌표가 변환된 새 기하학을 반환합니다.
+- [ST_AsText(geometry)](http://postgis.net/docs/ST_AsText.html): 지오메트리를 사람이 읽을 수 있는 WKT(Well-Known Text) 문자열로 반환합니다.
+- [ST_SetSRID(geometry, srid)](http://postgis.net/docs/ST_SetSRID.html): 지오메트리의 좌표값은 변경하지 않고 메타데이터인 SRID 정수값만 설정합니다.
+- [ST_SRID(geometry)](http://postgis.net/docs/ST_SRID.html): 지오메트리의 공간 참조 식별자(SRID) 번호를 반환합니다.
+- [ST_Transform(geometry, target_srid)](http://postgis.net/docs/ST_Transform.html): 지오메트리의 좌표를 대상 SRID의 공간 참조 체계로 변환(재투영)한 새 지오메트리를 반환합니다.
 
 
 ---

@@ -3,203 +3,191 @@
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/joins_advanced.html>](https://postgis.net/workshops/postgis-intro/joins_advanced.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
-마지막 섹션에서는 `ST_PointOnSurface(geometry)` 및 `ST_Union([geometry])` 함수와 몇 가지 간단한 예를 살펴보았습니다. 이 섹션에서는 좀 더 정교한 작업을 수행하겠습니다.
+앞서 학습한 `ST_PointOnSurface`와 `ST_Union` 함수를 결합하여 실무에서 자주 마주치는 복잡한 공간 데이터 가공 및 폴리곤 간 중복 집계 방지 기법을 살펴보겠습니다.
 
-## 인구 조사 표 만들기
+---
 
-작업장 `\data\` 디렉토리에는 속성 데이터가 포함되어 있지만 형상이 없는 `nyc_census_sociodata.sql` 파일이 있습니다. 이 표에는 출퇴근 시간, 소득, 교육 수준 등 뉴욕에 대한 흥미로운 사회경제적 데이터가 포함되어 있습니다. 문제가 하나 있습니다. 데이터는 "인구 조사 지역"으로 요약되어 있으며 인구 조사 지역 공간 데이터가 없습니다!
+## 1. 인구조사구(Census Tract) 공간 테이블 생성
 
-이 섹션에서는
+실습 데이터 디렉터리의 `nyc_census_sociodata.sql` 파일에는 가구 소득, 학력, 출퇴근 방식 등 뉴욕시의 상세 사회경제학 통계가 포함되어 있습니다. 하지만 이 데이터는 **인구조사구(Census Tract)** 단위로 집계된 비공간 속성 테이블입니다.
 
-- `nyc_census_sociodata.sql` 테이블 로드
-- 인구 조사 지역에 대한 공간 테이블 만들기
-- 속성 데이터를 공간 데이터에 결합합니다.
-- 새로운 데이터를 사용하여 몇 가지 분석을 수행합니다.
+따라서 공간 분석을 수행하려면 인구조사 블록(`nyc_census_blocks`)을 병합하여 인구조사구 공간 테이블을 직접 생성한 뒤 속성 데이터를 결합해야 합니다.
 
-### nyc_census_sociodata.sql 불러오기
+### 단계 1: nyc_census_sociodata.sql 테이블 로딩
+1. pgAdmin에서 쿼리 도구를 엽니다.
+2. *Open File* 메뉴로 `nyc_census_sociodata.sql` 파일을 불러와 실행합니다.
+3. 데이터베이스 테이블 목록을 새로고침하여 `nyc_census_sociodata` 테이블이 생성되었는지 확인합니다.
 
-1.  PgAdmin에서 SQL 쿼리 창을 엽니다.
-2.  메뉴에서 **파일-\>열기**를 선택하고 `nyc_census_sociodata.sql` 파일을 찾습니다.
-3.  "쿼리 실행" 버튼을 누르세요.
-4.  PgAdmin에서 "새로 고침" 버튼을 누르면 이제 테이블 목록이 `nyc_census_sociodata` 테이블에 포함되어야 합니다.
+### 단계 2: 블록을 합쳐 조사구 지오메트리 테이블 생성
+`blkid` 15자리 코드 중 앞 11자리가 인구조사구 식별자(`tractid`)에 해당합니다.
 
-### 인구 조사 표 만들기
+```text
+360610001001001 = 36 061 000100 1 001
 
-이전 섹션에서 본 것처럼 `blkid` 키의 하위 문자열을 요약하여 인구 조사 블록에서 더 높은 수준의 도형을 구축할 수 있습니다. 인구 조사 지역을 얻으려면 `blkid`의 처음 11자에 대한 그룹화를 요약해야 합니다.
-
-    360610001001001 = 36 061 000100 1 001
-
-    36     = State of New York
-    061    = New York County (Manhattan)
-    000100 = Census Tract
-    1      = Census Block Group
-    001    = Census Block
-
-`ST_Union` 집계를 사용하여 새 테이블을 만듭니다.
+36     = 뉴욕주 (State of New York)
+061    = 맨해튼 카운티 (New York County)
+000100 = 인구조사구 (Census Tract)
+1      = 블록 그룹 (Census Block Group)
+001    = 인구조사 블록 (Census Block)
+```
 
 ```sql
--- Make the tracts table
+-- 블록들을 병합하여 인구조사구 지오메트리 테이블 생성
 CREATE TABLE nyc_census_tract_geoms AS
 SELECT
   ST_Union(geom) AS geom,
-  SubStr(blkid,1,11) AS tractid
+  substr(blkid, 1, 11) AS tractid
 FROM nyc_census_blocks
 GROUP BY tractid;
 
--- Index the tractid
+-- tractid 컬럼에 인덱스 생성
 CREATE INDEX nyc_census_tract_geoms_tractid_idx
   ON nyc_census_tract_geoms (tractid);
 ```
 
-### 공간 데이터에 속성 결합
-
-표준 속성 조인을 사용하여 관 기하학 테이블을 관 속성 테이블에 결합합니다.
+### 단계 3: 공간 지오메트리와 인구사회 속성 결합
+조사구 지오메트리 테이블과 속성 테이블을 `tractid`로 조인하여 최종 `nyc_census_tracts` 테이블을 만듭니다.
 
 ```sql
--- Make the tracts table
 CREATE TABLE nyc_census_tracts AS
 SELECT
   g.geom,
   a.*
-FROM nyc_census_tract_geoms g
-JOIN nyc_census_sociodata a
-ON g.tractid = a.tractid;
+FROM nyc_census_tract_geoms AS g
+JOIN nyc_census_sociodata AS a
+  ON g.tractid = a.tractid;
 
--- Index the geometries
+-- 지오메트리 컬럼에 GiST 공간 인덱스 생성
 CREATE INDEX nyc_census_tract_gidx
   ON nyc_census_tracts USING GIST (geom);
 ```
 
-### 흥미로운 질문에 답변하기
+---
 
-흥미로운 질문에 답해보세요! "대학원 학위를 가진 사람들의 비율에 따라 뉴욕의 상위 10개 지역을 나열하십시오."
+## 2. 폴리곤-폴리곤 조인 시 중복 집계 문제 (Double-Counting)
+
+> **분석 질문**: "대학원 학위(석사/박사) 소지자 비율이 가장 높은 상위 10개 근린지역은 어디일까요?"
+
+먼저 단순 `ST_Intersects` 공간 조인으로 쿼리를 작성해 봅니다.
 
 ```sql
 SELECT
-  100.0 * Sum(t.edu_graduate_dipl) / Sum(t.edu_total) AS graduate_pct,
+  100.0 * sum(t.edu_graduate_dipl) / sum(t.edu_total) AS graduate_pct,
   n.name, n.boroname
-FROM nyc_neighborhoods n
-JOIN nyc_census_tracts t
-ON ST_Intersects(n.geom, t.geom)
+FROM nyc_neighborhoods AS n
+JOIN nyc_census_tracts AS t
+  ON ST_Intersects(n.geom, t.geom)
 WHERE t.edu_total > 0
 GROUP BY n.name, n.boroname
 ORDER BY graduate_pct DESC
 LIMIT 10;
 ```
 
-관심 있는 통계를 요약한 다음 마지막에 함께 나눕니다. 0으로 나누는 오류를 피하기 위해 인구수가 0인 전도지를 가져오지 않습니다.
+```text
+ graduate_pct |       name        | boroname
+--------------+-------------------+-----------
+         47.6 | Carnegie Hill     | Manhattan
+         42.2 | Upper West Side   | Manhattan
+         41.1 | Battery Park      | Manhattan
+         39.6 | Flatbush          | Brooklyn
+         39.3 | Tribeca           | Manhattan
+         39.2 | North Sutton Area | Manhattan
+         38.7 | Greenwich Village | Manhattan
+         38.6 | Upper East Side   | Manhattan
+         37.9 | Murray Hill       | Manhattan
+         37.4 | Central Park      | Manhattan
+```
 
-    graduate_pct |       name        | boroname
-    --------------+-------------------+-----------
-            47.6 | Carnegie Hill     | Manhattan
-            42.2 | Upper West Side   | Manhattan
-            41.1 | Battery Park      | Manhattan
-            39.6 | Flatbush          | Brooklyn
-            39.3 | Tribeca           | Manhattan
-            39.2 | North Sutton Area | Manhattan
-            38.7 | Greenwich Village | Manhattan
-            38.6 | Upper East Side   | Manhattan
-            37.9 | Murray Hill       | Manhattan
-            37.4 | Central Park      | Manhattan
+뉴욕 지리에 익숙한 사람이라면 브루클린의 전통적인 서민 주거지인 **Flatbush**가 상위 4위(39.6%)에 오른 점에 의문을 품을 수 있습니다.
 
-> [!NOTE]
-> 뉴욕 지리에 익숙한 독자라면 고학력 지역 목록에 "Flatbush"가 포함된 것을 의아하게 여길 수 있습니다. 그 이유는 다음 절에서 살펴봅니다.
-
-## 다각형/다각형 조인
-
-흥미로운 쿼리(`interestingquestion`)에서 `ST_Intersects(geometry_a, geometry_b)` 함수를 사용하여 각 지역 요약에 포함할 인구 조사 지역 다각형을 결정했습니다. 다음 질문으로 이어집니다. 한 지역이 두 동네 사이의 경계에 있으면 어떻게 될까요? 이는 둘 다 교차하므로 **both**에 대한 요약 통계에 포함됩니다.
-
+### 원인 분석: 경계선 중복 집계
 ![이미지](screenshots/centroid_neighborhood.png)
 
-이러한 종류의 이중 계산을 방지하려면 다음 두 가지 방법이 있습니다.
-
-- 간단한 방법은 각 트랙이 **one** 요약 영역에만 포함되도록 하는 것입니다(`ST_PointOnSurface(geometry)` 사용).
-- 복잡한 방법은 국경에서 교차로를 분할하는 것입니다(`ST_Intersection(geometry,geometry)` 사용).
-
-다음은 대학원 교육 쿼리에서 이중 계산을 방지하기 위해 간단한 방법을 사용하는 예입니다.
-
-```sql
-SELECT
-  100.0 * Sum(t.edu_graduate_dipl) / Sum(t.edu_total) AS graduate_pct,
-  n.name, n.boroname
-FROM nyc_neighborhoods n
-JOIN nyc_census_tracts t
-ON ST_Contains(n.geom, ST_PointOnSurface(t.geom))
-WHERE t.edu_total > 0
-GROUP BY n.name, n.boroname
-ORDER BY graduate_pct DESC
-LIMIT 10;
-```
-
-모든 인구 조사 구역에서 `ST_PointOnSurface` 함수를 실행해야 하므로 이제 쿼리를 실행하는 데 시간이 더 오래 걸립니다.
-
-    graduate_pct |        name         | boroname
-    --------------+---------------------+-----------
-            48.0 | Carnegie Hill       | Manhattan
-            44.2 | Morningside Heights | Manhattan
-            42.1 | Greenwich Village   | Manhattan
-            42.0 | Upper West Side     | Manhattan
-            41.4 | Tribeca             | Manhattan
-            40.7 | Battery Park        | Manhattan
-            39.5 | Upper East Side     | Manhattan
-            39.3 | North Sutton Area   | Manhattan
-            37.4 | Cobble Hill         | Brooklyn
-            37.4 | Murray Hill         | Manhattan
-
-이중 계산을 피하면 결과가 달라집니다!
-
-### 플랫부시는 어떻습니까?
-
-특히 Flatbush 지역은 목록에서 제외되었습니다. 그 이유는 우리 테이블에 있는 플랫부시(Flatbush) 동네 지도를 좀 더 자세히 보면 알 수 있습니다.
+위 그림처럼 하나의 인구조사구가 두 개 이상의 동네 경계선에 걸쳐 있는 경우, `ST_Intersects`를 사용하면 해당 조사구의 통계가 **두 동네 모두에 중복 합산**됩니다.
 
 ![이미지](screenshots/nyc_tracts_flatbush.jpg)
 
-이 데이터에서 Flatbush는 Prospect Park 영역만 포함하므로 일반적인 의미의 주거 지역이 아닙니다. 해당 인구조사 구역의 주민 수는 당연히 0명입니다. 그러나 경계가 공원 북쪽의 고급화된 Park Slope에 속한 고소득 인구조사 구역 하나와 살짝 겹칩니다. 다각형끼리 교차 여부를 검사하면 이 구역의 값이 주민이 없는 Flatbush에 합산되어, 앞의 쿼리에서 점수가 비정상적으로 높아집니다.
+실제 데이터에서 Flatbush 폴리곤은 거주 인구가 0명인 프로스펙트 공원(Prospect Park) 영역을 포함하고 있는데, 인접한 부촌인 Park Slope의 고학력 인구조사구 경계와 살짝 교차하면서 해당 인구가 Flatbush로 중복 합산되어 점수가 비정상적으로 왜곡된 것입니다.
 
-## 큰 반경 거리 조인
+---
 
-재미있는 질문은 "지하철역 근처(500m 이내) 사람들의 통근시간은 지하철역에서 멀리 떨어진 사람들의 통근시간과 어떻게 다른가?"이다.
+## 3. 대표점(ST_PointOnSurface)을 활용한 중복 집계 해결
 
-그러나 이 질문은 이중 계산의 몇 가지 문제에 직면합니다. 많은 사람들이 여러 지하철역에서 500m 이내에 있을 것입니다. 뉴욕의 인구를 비교해보세요:
-
-```sql
-SELECT Sum(popn_total)
-FROM nyc_census_blocks;
-```
-
-    8175032
-
-뉴욕 지하철 역에서 500미터 이내에 있는 사람들의 인구를 보면 다음과 같습니다.
+이러한 이중 집계(Double-Counting)를 방지하는 가장 확실하고 직관적인 방법은 각 인구조사구를 **하나의 내부 대표점(`ST_PointOnSurface`)**으로 변환하여 조인하는 것입니다. 대표점은 반드시 단 하나의 동네 폴리곤에만 포함(`ST_Contains`)되므로 중복이 완벽히 제거됩니다.
 
 ```sql
-SELECT Sum(popn_total)
-FROM nyc_census_blocks census
-JOIN nyc_subway_stations subway
-ON ST_DWithin(census.geom, subway.geom, 500);
+SELECT
+  100.0 * sum(t.edu_graduate_dipl) / sum(t.edu_total) AS graduate_pct,
+  n.name, n.boroname
+FROM nyc_neighborhoods AS n
+JOIN nyc_census_tracts AS t
+  ON ST_Contains(n.geom, ST_PointOnSurface(t.geom))
+WHERE t.edu_total > 0
+GROUP BY n.name, n.boroname
+ORDER BY graduate_pct DESC
+LIMIT 10;
 ```
 
-    10855873
+```text
+ graduate_pct |        name         | boroname
+--------------+---------------------+-----------
+         48.0 | Carnegie Hill       | Manhattan
+         44.2 | Morningside Heights | Manhattan
+         42.1 | Greenwich Village   | Manhattan
+         42.0 | Upper West Side     | Manhattan
+         41.4 | Tribeca             | Manhattan
+         40.7 | Battery Park        | Manhattan
+         39.5 | Upper East Side     | Manhattan
+         39.3 | North Sutton Area   | Manhattan
+         37.4 | Cobble Hill         | Brooklyn
+         37.4 | Murray Hill         | Manhattan
+```
 
-전체 인구보다 지하철 인근 인구가 더 많게 계산되었습니다. 간단한 SQL에서 인구를 크게 중복 집계한 것입니다. 지하철 노선 버퍼 그림을 보면 원인을 알 수 있습니다.
+중복 집계를 제거하자 비정상적으로 높았던 Flatbush가 정상적으로 제외되고, 컬럼비아 대학교가 위치한 Morningside Heights 등이 상위권으로 정확히 재배열되었습니다.
+
+---
+
+## 4. 대규모 반경 거리 조인에서의 중복 제거
+
+> **분석 질문**: "뉴욕시 지하철역 반경 500m(도보 약 5~7분) 이내 역세권에 거주하는 총 인구수는 몇 명일까요?"
+
+단순히 `ST_DWithin`으로 조인하여 합산하면 다음과 같은 문제가 발생합니다.
+
+```sql
+-- 잘못된 단순 조인 (인구 중복 합산 발생)
+SELECT sum(popn_total)
+FROM nyc_census_blocks AS census
+JOIN nyc_subway_stations AS subway
+  ON ST_DWithin(census.geom, subway.geom, 500);
+```
+
+```text
+10855873
+```
+
+뉴욕시 전체 인구(약 817만 명)보다 많은 **1,085만 명**이 나옵니다. 하나의 인구조사 블록이 인접한 여러 지하철역 반경에 동시에 포함되어 중복 계산되었기 때문입니다.
 
 ![이미지](screenshots/subways_buffered.png)
 
-해결책은 쿼리의 요약 부분에 전달하기 전에 고유한 인구 조사 블록만 있는지 확인하는 것입니다. 쿼리를 고유한 블록을 찾는 하위 쿼리로 나누고, 답변을 반환하는 요약 쿼리로 래핑하면 됩니다.
+### 해결책: CTE와 DISTINCT ON 활용
+집계하기 전에 고유한 인구조사 블록(`blkid`)만 선별합니다.
 
 ```sql
 WITH distinct_blocks AS (
   SELECT DISTINCT ON (blkid) popn_total
-  FROM nyc_census_blocks census
-  JOIN nyc_subway_stations subway
-  ON ST_DWithin(census.geom, subway.geom, 500)
+  FROM nyc_census_blocks AS census
+  JOIN nyc_subway_stations AS subway
+    ON ST_DWithin(census.geom, subway.geom, 500)
 )
-SELECT Sum(popn_total)
+SELECT sum(popn_total) AS subway_accessible_population
 FROM distinct_blocks;
 ```
 
-    5005743
+```text
+5005743
+```
 
-그게 더 낫습니다! 따라서 뉴욕 인구의 절반 이상이 지하철에서 500m(도보로 약 5~7분) 이내에 있습니다.
+정확한 집계 결과, 뉴욕시 전체 인구의 약 $61\%$에 해당하는 **5,005,743명**이 지하철역 도보 500m 이내 역세권에 거주하고 있음을 알 수 있습니다.
 
 
 ---

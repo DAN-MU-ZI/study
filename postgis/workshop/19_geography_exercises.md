@@ -1,74 +1,92 @@
-# 19. 지리 연습 (Geography Exercises)
+# 19. 지오그래피 실습 (Geography Exercises)
 
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/geography_exercises.html>](https://postgis.net/workshops/postgis-intro/geography_exercises.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
-지금까지 살펴본 기능을 다시 정리해 보겠습니다. 연습 문제를 풀 때 참고하세요.
+앞서 학습한 지오그래피 함수들을 활용하여 다음 실습 문제를 직접 해결해 보세요.
 
-- `Sum(number)`는 결과 집합의 모든 숫자를 더합니다.
-- `ST_GeogFromText(text)`는 지리를 반환합니다.
-- `ST_Distance(geography, geography)`는 지역 간 거리를 반환합니다.
-- `ST_Transform(geometry, srid)`는 새 투영에서 형상을 반환합니다.
-- `ST_Length(geography)`는 줄의 길이를 반환합니다.
-- 객체가 평면 공간에서 분리되지 않은 경우 `ST_Intersects(geometry, geometry)`는 true를 반환합니다.
-- `ST_Intersects(geography, geography)`는 객체가 회전타원체 공간에서 분리되지 않은 경우 true를 반환합니다.
+### 실습 참조 함수 요약
+- `sum(expression)`: 값 집합의 총합계
+- `ST_GeographyFromText(text)`: WKT 문자열로부터 지오그래피 객체 생성
+- `ST_Distance(geography, geography)`: 타원체 상의 최단 거리 계산 (미터 단위)
+- `ST_Length(geography)`: 타원체 상의 선형 경로 길이 계산 (미터 단위)
+- `ST_Intersects(geography, geography)`: 타원체 상에서 두 객체가 공간을 공유하는지 검사
 
-또한 사용 가능한 테이블을 기억하십시오.
+---
 
-- `nyc_streets`
-  - 이름, 유형, 지리
-- `nyc_neighborhoods`
-  - 이름, 보로나메, 검
+## 연습 문제 및 정답
 
-## 연습
+### 1. 뉴욕과 시애틀 사이의 거리는 얼마이며, 반환된 값의 단위는 무엇입니까?
 
-- **뉴욕은 시애틀에서 얼마나 멀나요? 답의 단위는 무엇입니까?**
+> [!NOTE]
+> - 뉴욕(NYC): `POINT(-74.0064 40.7142)`
+> - 시애틀(Seattle): `POINT(-122.3331 47.6097)`
 
-  > [!NOTE]
-  > 뉴욕 = `POINT(-74.0064 40.7142)`, 시애틀 = `POINT(-122.3331 47.6097)`
+```sql
+SELECT ST_Distance(
+  'POINT(-74.0064 40.7142)'::geography,
+  'POINT(-122.3331 47.6097)'::geography
+) AS distance_meters;
+```
 
-  ```sql
-  SELECT ST_Distance(
-    'POINT(-74.0064 40.7142)'::geography,
-    'POINT(-122.3331 47.6097)'::geography
-    );
-  ```
+```text
+distance_meters
+----------------
+3875538.57141352
+```
 
-      3875538.57141352
+- **계산 결과**: 약 **3,875.54km** ($3,875,538.57\text{m}$)
+- **단위**: **미터(Meter)**
 
-- **뉴욕의 모든 거리의 총 길이는 회전타원체로 계산하면 얼마입니까?**
+---
 
-  ```sql
-  SELECT Sum(
-    ST_Length(Geography(
-      ST_Transform(geom,4326)
-    )))
-  FROM nyc_streets;
-  ```
+### 2. WGS84 회전타원체 상에서 측정한 뉴욕시 전체 도로의 총 연장은 얼마입니까?
 
-      10421999.666
+```sql
+SELECT sum(
+  ST_Length(
+    Geography(ST_Transform(geom, 4326))
+  )
+) AS total_length_meters
+FROM nyc_streets;
+```
 
-  > [!NOTE]
-  > 평면 "UTM Zone 18" 투영에서 계산된 길이는 10418904.717로 0.02% 다릅니다. UTM은 구역 경계 내에서 면적과 거리를 보존하는 데 적합합니다.
+```text
+total_length_meters
+-------------------
+10421999.666
+```
 
-- **`POINT(1 2.0001)`은 `POLYGON((0 0, 0 2, 2 2, 2 0, 0 0))`과 교차합니까? `geography`와 `geometry`의 결과가 다른 이유는 무엇입니까?**
+> [!NOTE]
+> 타원체 상에서 계산된 총 연장은 약 **10,422.00km**입니다. 앞서 17장에서 평면 State Plane 투영(SRID 2831)으로 계산한 값(10,421.99km)과 거의 정확하게 일치($0.0001\%$ 미만 오차)함을 확인할 수 있습니다.
 
-  ```sql
-  SELECT ST_Intersects(
-    'POINT(1 2.0001)'::geography,
-    'POLYGON((0 0,0 2,2 2,2 0,0 0))'::geography
-  );
+---
 
-  SELECT ST_Intersects(
-    'POINT(1 2.0001)'::geometry,
-    'POLYGON((0 0,0 2,2 2,2 0,0 0))'::geometry
-  );
-  ```
+### 3. 점 `POINT(1 2.0001)`은 사각형 `POLYGON((0 0, 0 2, 2 2, 2 0, 0 0))`과 교차합니까? `geography`와 `geometry`에서 결과가 서로 다르게 나오는 이유는 무엇입니까?
 
-      true and false
+```sql
+-- 지오그래피 (구면 대권 경로)
+SELECT ST_Intersects(
+  'POINT(1 2.0001)'::geography,
+  'POLYGON((0 0, 0 2, 2 2, 2 0, 0 0))'::geography
+) AS geog_intersects;
 
-  > [!NOTE]
-  > `geometry`에서 사각형의 위쪽 변은 점 **아래**를 지나는 직선이므로 점과 교차하지 않습니다. `geography`에서는 같은 변이 점 **위**를 지나는 대권 경로이므로 점과 교차합니다.
+-- 지오메트리 (평면 직선)
+SELECT ST_Intersects(
+  'POINT(1 2.0001)'::geometry,
+  'POLYGON((0 0, 0 2, 2 2, 2 0, 0 0))'::geometry
+) AS geom_intersects;
+```
+
+```text
+ geog_intersects | geom_intersects
+-----------------+-----------------
+ true            | false
+```
+
+### 결과가 다른 이유
+- **평면 지오메트리(`geometry`)**: $(0, 2)$와 $(2, 2)$를 잇는 상단 변이 완벽한 2차원 수평 직선($Y = 2$)을 이룹니다. 질의 점 $(1, 2.0001)$은 $Y = 2$ 선보다 위에 있으므로 폴리곤 외부에 위치하여 `false`를 반환합니다.
+- **구면 지오그래피(`geography`)**: $(0, 2)$와 $(2, 2)$를 잇는 최단 경로는 평면 직선이 아니라 둥근 지구 곡면을 따라 북쪽으로 솟아오르는 **대권 항로(Great-Circle Arc)** 곡선이 됩니다. 이 대권 곡선의 중앙부 정점은 $Y = 2.0001$보다 높은 위치를 지나가므로, 질의 점 $(1, 2.0001)$이 폴리곤 내부로 포함되어 `true`를 반환합니다.
 
 
 ---

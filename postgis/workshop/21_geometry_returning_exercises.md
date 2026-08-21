@@ -1,101 +1,108 @@
-# 21. 도형 반환 연습 (Geometry Returning Exercises)
+# 21. 지오메트리 생성 실습 (Geometry Constructing Exercises)
 
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/geometry_returning_exercises.html>](https://postgis.net/workshops/postgis-intro/geometry_returning_exercises.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
-앞에서 살펴본 함수 가운데 이번 실습에 유용한 것들을 정리하면 다음과 같습니다.
+앞서 학습한 지오메트리 생성 및 가공 함수들을 활용하여 다음 실습 문제를 직접 해결해 보세요.
 
-- 레코드 집합에 대한 합계를 반환하는 `sum(expression)` 집계
-- `ST_Area(geometry)`는 형상의 면적을 반환합니다.
-- `ST_Centroid(geometry)`는 `geometry` 중심을 반환합니다.
-- `ST_Transform(geometry, srid)`는 `geometries`를 다른 공간 참조 시스템으로 변환합니다.
-- `ST_Buffer(geometry, radius)`는 확장된 `geometry` 모양을 반환합니다.
-- `ST_Contains(geometry1, geometry2)`는 기하학1에 기하학2가 포함된 경우 true를 반환합니다.
-- `ST_Union(geometry[])`는 그룹에 있는 모든 도형의 총합을 반환합니다.
-- `ST_GeometryType(geometry)`는 형상 유형을 반환합니다.
-- `ST_NumGeometries(geometry)`는 컬렉션의 도형 수를 반환하거나 단순 도형의 경우 1을 반환합니다.
-- `ST_Intersection(geometry, geometry)`는 두 입력 형상이 공통으로 공유하는 영역을 반환합니다.
+### 실습 참조 함수 요약
+- `ST_Centroid(geometry)`: 지오메트리의 무게중심 점 반환
+- `ST_Buffer(geometry, radius)`: 지오메트리 주변 완충 구역 생성
+- `ST_Intersection(geometry A, geometry B)`: 두 지오메트리의 공통 교집합 영역 반환
+- `ST_Union(geometry set)`: 그룹 내 모든 지오메트리를 하나로 병합
+- `ST_GeometryType(geometry)`: 지오메트리의 OGC 타입 명칭 반환
+- `ST_NumGeometries(geometry)`: 멀티/컬렉션 내 구성 지오메트리 개수 반환
+- `ST_Contains(geometry A, geometry B)`: A가 B를 완전히 포함하는지 검사
 
-우리가 사용할 수 있는 테이블을 기억하세요:
+---
 
-- `nyc_census_blocks`
-  - 이름, popn_total, 보로나메, 검
-- `nyc_streets`
-  - 이름, 유형, 지리
-- `nyc_subway_stations`
-  - 이름, 기하학
-- `nyc_neighborhoods`
-  - 이름, 보로나메, 검
+## 연습 문제 및 정답
 
-## 연습
+### 1. 자신의 무게중심(Centroid)을 내부에 포함하지 않는 오목한 인구조사 블록은 총 몇 개입니까?
 
-- **자체 중심을 포함하지 않는 인구 조사 블록은 몇 개입니까?**
+```sql
+SELECT count(*)
+FROM nyc_census_blocks
+WHERE NOT ST_Contains(geom, ST_Centroid(geom));
+```
 
-  ```sql
-  SELECT Count(*)
-    FROM nyc_census_blocks
-    WHERE NOT
-      ST_Contains(
-        geom,
-        ST_Centroid(geom)
-      );
-  ```
+```text
+481
+```
 
-      481
+> [!NOTE]
+> 'U'자, 'L'자, 도넛 형태 등의 오목한(Concave) 블록 481개는 무게중심이 블록 외부에 떨어집니다. 이러한 블록의 대표 위치를 잡을 때는 반드시 `ST_PointOnSurface`를 사용해야 합니다.
 
-- **모든 인구 조사 블록을 단일 출력으로 통합합니다. 어떤 종류의 기하학입니까? 부품이 몇 개 있나요?**
+---
 
-  ```sql
-  CREATE TABLE nyc_census_blocks_merge AS
-    SELECT ST_Union(geom) AS geom
-    FROM nyc_census_blocks;
+### 2. 뉴욕시의 모든 인구조사 블록을 하나로 병합(`ST_Union`)하면 어떤 지오메트리 타입이 되며, 분리된 폴리곤 조각(Parts)은 몇 개입니까?
 
-  SELECT ST_GeometryType(geom)
-    FROM nyc_census_blocks_merge;
-  ```
+```sql
+-- 모든 블록을 하나로 병합한 임시 테이블 생성
+CREATE TABLE nyc_census_blocks_merge AS
+SELECT ST_Union(geom) AS geom
+FROM nyc_census_blocks;
 
-      ST_MultiPolygon
+-- 지오메트리 타입 확인
+SELECT ST_GeometryType(geom)
+FROM nyc_census_blocks_merge;
+```
 
-  ```sql
-  SELECT ST_NumGeometries(geom)
-    FROM nyc_census_blocks_merge;
-  ```
+```text
+ST_MultiPolygon
+```
 
-      63
+```sql
+-- 구성 폴리곤 조각 개수 확인
+SELECT ST_NumGeometries(geom)
+FROM nyc_census_blocks_merge;
+```
 
-- **원점 주위에 반지름 1인 버퍼를 만들면 면적은 얼마입니까? 예상값과 얼마나 다르며, 그 이유는 무엇입니까?**
+```text
+63
+```
 
-  ```sql
-  SELECT ST_Area(ST_Buffer('POINT(0 0)', 1));
-  ```
+- **지오메트리 타입**: `ST_MultiPolygon`
+- **폴리곤 개수**: **63개** (뉴욕시 본토와 맨해튼, 스태튼아일랜드, 롱아일랜드 및 자메이카 만의 여러 섬들로 나뉨)
 
-      3.121445152258052
+---
 
-  > [!NOTE]
-  > 단위원(반지름이 1인 원)의 면적은 pi, 3.1415926...이어야 합니다. 차이는 버퍼 가장자리의 선형 스트로크 때문입니다. 버퍼에는 유한한 수의 모서리가 있습니다. 버퍼의 가장자리 수를 늘리면 값이 pi에 가까워지지만 선형화로 인해 항상 작아집니다.
+### 3. 원점 `POINT(0 0)` 주위에 반지름 1인 원형 버퍼를 생성했을 때 계산되는 면적은 얼마이며, 이론적 원의 넓이($\pi \approx 3.14159$)와 차이가 나는 이유는 무엇입니까?
 
-- **브루클린 지역인 '파크 슬로프'와 '캐롤 가든'이 전쟁을 벌입니다! 이웃 사이의 경계에 폭 100m의 DMZ를 나타내는 다각형을 만듭니다. DMZ의 면적은 무엇입니까?**
+```sql
+SELECT ST_Area(ST_Buffer('POINT(0 0)'::geometry, 1));
+```
 
-  ```sql
-  CREATE TABLE brooklyn_dmz AS
-    SELECT
-      ST_Intersection(
-        ST_Buffer(ps.geom, 50),
-        ST_Buffer(cg.geom, 50))
-      AS geom
-    FROM
-      nyc_neighborhoods ps,
-      nyc_neighborhoods cg
-    WHERE ps.name = 'Park Slope'
-    AND cg.name = 'Carroll Gardens';
+```text
+3.121445152258052
+```
 
-  SELECT ST_Area(geom) FROM brooklyn_dmz;
-  ```
+> [!NOTE]
+> 컴퓨터 공간 기하 알고리즘은 곡선을 유한한 개수의 직선 선분(기본 8분면당 8개 세그먼트)으로 근사화(Linear Approximation)하여 다각형을 만듭니다. 따라서 다각형으로 표현된 원은 실제 수학적 원보다 정점 사이의 호 부분이 깎여 나가므로 $\pi$보다 약간 작은 값이 계산됩니다. `ST_Buffer`의 세 번째 파라미터(예: `quad_segs=32`)로 분할 수를 늘리면 $\pi$에 더 가까워집니다.
 
-  > [!NOTE]
-  > 두 관심 지역을 모두 버퍼링하는 것은 쉽지만 교차점을 얻으려면 테이블의 자체 조인이 필요합니다. 즉, "Park Slope" 레코드만으로 하나의 관계(`ps`)를 생성하고 "Carroll Gardens" 레코드로만 다른 관계(`cg`)를 생성해야 합니다. 아직 UTM 18(EPSG:26918)에서 작업 중이므로 교차로 영역은 평방미터 단위입니다.
+---
 
-      180990.964207547
+### 4. 브루클린의 'Park Slope'와 'Carroll Gardens' 근린지역 경계에 폭 100m의 완충 지대(DMZ: 각 동네 경계에서 50m씩 버퍼링한 후 교집합)를 만들 때, 이 DMZ의 총 면적은 얼마입니까?
+
+```sql
+CREATE TABLE brooklyn_dmz AS
+SELECT
+  ST_Intersection(
+    ST_Buffer(ps.geom, 50),
+    ST_Buffer(cg.geom, 50)
+  ) AS geom
+FROM nyc_neighborhoods ps, nyc_neighborhoods cg
+WHERE ps.name = 'Park Slope'
+  AND cg.name = 'Carroll Gardens';
+
+SELECT ST_Area(geom) FROM brooklyn_dmz;
+```
+
+```text
+180990.964207547
+```
+
+- **계산된 DMZ 면적**: 약 **$180,991\text{m}^2$** (약 18.1헥타르)
 
 
 ---

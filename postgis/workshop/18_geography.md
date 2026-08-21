@@ -3,245 +3,165 @@
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/geography.html>](https://postgis.net/workshops/postgis-intro/geography.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
-좌표가 "지리" 또는 "위도/경도"인 데이터를 갖는 것은 매우 일반적입니다.
+GPS나 웹 지도에서 가장 흔히 접하는 좌표는 경도/위도(Longitude/Latitude) 형식의 지리 좌표입니다.
 
-Mercator, UTM 또는 Stateplane의 좌표와 달리 지리적 좌표는 **직교 좌표가 아닙니다**. 지리적 좌표는 평면에 표시된 원점으로부터의 선형 거리를 나타내지 않습니다. 오히려 이러한 **구형 좌표**는 지구본의 각도 좌표를 나타냅니다. 구면 좌표에서 점은 기준 자오선(경도)으로부터의 회전 각도와 적도(위도)로부터의 각도로 지정됩니다.
+그러나 UTM이나 State Plane과 같은 평면 직교 좌표와 달리, 지리 좌표는 **데카르트 평면 직교 좌표(Cartesian Coordinates)가 아닙니다**. 지리 좌표는 평면상의 선형 거리(m, km)를 나타내는 것이 아니라, 둥근 지구본 상에서의 **구면 각도(Spherical Angles, 단위: 도/Degree)**를 나타냅니다.
 
 ![image](geography/cartesian_spherical.jpg)
 
-지리적 좌표를 대략적인 데카르트 좌표로 처리하고 계속해서 공간 계산을 수행할 수 있습니다. 그러나 거리, 길이 및 면적의 측정값은 **nonsensical**입니다. 구형 좌표는 **angular** 거리를 측정하므로 단위는 "도"입니다. 또한 교차 및 포함과 같은 인덱스 및 참/거짓 테스트의 대략적인 결과가 크게 잘못될 수 있습니다. 극지방이나 국제 날짜 변경선과 같은 문제 영역에 접근할수록 지점 사이의 거리가 더 커집니다.
+지리 좌표를 평면 데카르트 좌표로 간주하고 평면 거리 함수를 호출하면 왜곡이 발생하여 현실과 동떨어진 결과가 나옵니다. 위도에 따라 1도($1^\circ$)가 나타내는 실제 지상 거리가 크게 변하기 때문입니다(적도 부근에서는 약 111km이지만, 극지방으로 갈수록 0에 수렴).
 
-예를 들어 로스앤젤레스와 파리의 좌표는 다음과 같습니다.
+---
 
-- 로스앤젤레스: `POINT(-118.4079 33.9434)`
-- 파리: `POINT(2.3490 48.8533)`
+## 평면 지오메트리 vs 구면 지오그래피 거리 계산 비교
 
-다음은 표준 PostGIS Cartesian `ST_Distance(geometry, geometry)`를 사용하여 로스앤젤레스와 파리 사이의 거리를 계산합니다. 4326의 SRID는 지리 공간 참조 시스템을 선언합니다.
+로스앤젤레스(LAX)와 파리(CDG) 공항의 좌표를 예로 들어보겠습니다.
 
-```sql
-SELECT ST_Distance(
-  'SRID=4326;POINT(-118.4079 33.9434)'::geometry, -- Los Angeles (LAX)
-  'SRID=4326;POINT(2.5559 49.0083)'::geometry     -- Paris (CDG)
-  );
-```
+- 로스앤젤레스(LAX): `POINT(-118.4079 33.9434)`
+- 파리(CDG): `POINT(2.5559 49.0083)`
 
-    121.898285970107
-
-아하! 122! 그런데 그게 무슨 뜻이에요?
-
-공간 참조 체계 4326의 단위는 도(degree)이므로 결과는 122도입니다. 하지만 이 값이 실제 거리로 무엇을 의미할까요?
-
-구에서 1도 제곱의 크기는 매우 가변적이며 적도에서 멀어질수록 작아집니다. 극을 향해 갈수록 지구의 자오선(수직선)이 서로 가까워진다고 생각해 보세요. 따라서 122도의 거리는 아무 *의미*도 아닙니다. 말도 안되는 숫자입니다.
-
-의미 있는 거리를 계산하려면 지리적 좌표를 대략적인 데카르트 좌표가 아닌 실제 구면 좌표로 처리해야 합니다. 우리는 대권의 일부인 구 위의 실제 경로로서 점 사이의 거리를 측정해야 합니다.
-
-PostGIS는 `geography` 유형을 통해 이 기능을 제공합니다.
-
-> [!NOTE]
-> 공간 데이터베이스마다 "지리적 처리"에 대한 접근 방식이 다릅니다.
->
-> - Oracle은 SRID가 지리적인 경우 지리적 계산을 투명하게 수행하여 차이점을 무시하려고 시도합니다.
-> - SQL Server는 데카르트 데이터용 "STGeometry"와 지리용 "STGeography"라는 두 가지 공간 유형을 사용합니다.
-> - Informix Spatial은 Informix에 대한 순수한 데카르트 확장인 반면, Informix Geodetic은 순수한 지리적 확장입니다.
-> - SQL Server와 마찬가지로 PostGIS는 "기하학"과 "지리"라는 두 가지 유형을 사용합니다.
-
-`geometry` 유형 대신 `geography`를 사용하여 로스앤젤레스와 파리 사이의 거리를 다시 측정해 보겠습니다.
+먼저 평면 지오메트리(`geometry`) 타입으로 거리를 계산해 봅니다.
 
 ```sql
 SELECT ST_Distance(
-  'SRID=4326;POINT(-118.4079 33.9434)'::geography, -- Los Angeles (LAX)
-  'SRID=4326;POINT(2.5559 49.0083)'::geography     -- Paris (CDG)
-  );
-```
-
-    9124665.27317673
-
-큰 숫자! `geography` 계산의 모든 반환 값은 **meters**에 있으므로 답은 9125km입니다.
-
-이전 버전의 PostGIS는 `ST_Distance_Spheroid(point, point, measurement)` 함수를 사용하여 구에 대한 매우 기본적인 계산을 지원했습니다. 그러나 `ST_Distance_Spheroid`는 실질적으로 제한적입니다. 이 기능은 점에서만 작동하며 극점 또는 국제 날짜 변경선에 대한 인덱싱을 지원하지 않습니다.
-
-"로스앤젤레스에서 파리로 가는 비행기가 아이슬란드에 얼마나 가까이 갈 수 있을까요?"와 같은 질문을 던지면 비점 기하학을 지원해야 할 필요성이 매우 분명해집니다.
-
-![이미지](geography/lax_cdg.jpg)
-
-데카르트 평면에서 지리 좌표를 계산한 보라색 선은 실제 경로와 크게 어긋납니다. 반면 대권 경로인 빨간색 선은 올바른 결과를 보여 줍니다. LAX-CDG 항로를 라인스트링으로 만들고 `geography`를 사용해 아이슬란드의 한 지점까지 거리를 계산하면 올바른 값을 미터 단위로 얻을 수 있습니다.
-
-```sql
-SELECT ST_Distance(
-  ST_GeographyFromText('LINESTRING(-118.4079 33.9434, 2.5559 49.0083)'), -- LAX-CDG
-  ST_GeographyFromText('POINT(-22.6056 63.9850)')                        -- Iceland (KEF)
+  'SRID=4326;POINT(-118.4079 33.9434)'::geometry,
+  'SRID=4326;POINT(2.5559 49.0083)'::geometry
 );
 ```
 
-    502454.906643729
+```text
+121.898285970107
+```
 
-따라서 LAX-CDG 노선에서 아이슬란드에 가장 가까운 접근 경로(국제공항에서 측정 시)는 상대적으로 작은 502km입니다.
+결과로 나온 **121.89**라는 숫자는 실제 미터나 킬로미터 거리가 아니라, 경위도 각도 평면에서의 **$121.89^\circ$(도)**를 의미합니다. 지구 곡률과 위도별 거리 차이가 전혀 반영되지 않은 무의미한 수치입니다.
 
-지리적 좌표를 처리하는 데카르트식 접근 방식은 국제 날짜 변경선을 가로지르는 지형지물에 대해 완전히 무너집니다. 로스앤젤레스에서 도쿄까지의 최단 대권 경로는 태평양을 횡단합니다. 가장 짧은 데카르트 경로는 대서양과 인도양을 횡단합니다.
+실제 현실의 거리를 구하려면 구면 또는 회전타원체 상의 최단 경로인 **대권 항로(Great-Circle Arc)**를 따라 계산해야 합니다.
+
+PostGIS는 이러한 측지선(Geodetic) 연산을 위해 **`geography` 타입**을 제공합니다.
+
+```sql
+SELECT ST_Distance(
+  'SRID=4326;POINT(-118.4079 33.9434)'::geography,
+  'SRID=4326;POINT(2.5559 49.0083)'::geography
+);
+```
+
+```text
+9124665.27317673
+```
+
+`geography` 타입을 사용한 연산 결과는 **미터(Meter)** 단위로 정확히 반환됩니다. 즉, LAX에서 CDG까지의 실제 비행 거리는 약 **9,125km**입니다.
+
+---
+
+## 대권 항로와 국제날짜변경선 문제
+
+지오그래피의 진가는 선형 객체와 전 지구적 스케일의 공간 분석에서 더욱 두드러집니다.
+
+> "로스앤젤레스(LAX)에서 파리(CDG)로 향하는 항공로는 아이슬란드(KEF)에 얼마나 가깝게 접근할까요?"
+
+![이미지](geography/lax_cdg.jpg)
+
+위 그림에서 평면 좌표계로 단순 직선을 그은 보라색 선은 실제 비행 경로와 완전히 다릅니다. 반면 타원체 곡면을 따른 대권 항로(붉은색 선)는 캐나다 북부와 그린란드를 거쳐 아이슬란드 인근을 통과합니다.
+
+```sql
+SELECT ST_Distance(
+  ST_GeographyFromText('LINESTRING(-118.4079 33.9434, 2.5559 49.0083)'), -- LAX-CDG 항로
+  ST_GeographyFromText('POINT(-22.6056 63.9850)')                         -- 아이슬란드 KEF 공항
+) / 1000.0 AS distance_km;
+```
+
+```text
+502.454906643729
+```
+
+실제 최단 접근 거리는 약 **502km**로 측정됩니다.
+
+또한 평면 지오메트리는 **국제날짜변경선(경도 $\pm 180^\circ$)**을 가로지르는 순간 완전히 잘못된 경로를 계산합니다. 로스앤젤레스에서 도쿄(NRT)로 갈 때 평면 지오메트리는 대서양과 인도양을 거쳐 지구를 반대로 돌아가는 경로를 계산하지만, 지오그래피는 태평양을 건너는 실제 최단 거리를 정확히 계산합니다.
 
 ![이미지](geography/lax_nrt.png)
 
 ```sql
-SELECT ST_Distance(
-  ST_GeometryFromText('Point(-118.4079 33.9434)'),  -- LAX
-  ST_GeometryFromText('Point(139.733 35.567)'))     -- NRT (Tokyo/Narita)
-    AS geometry_distance,
-ST_Distance(
-  ST_GeographyFromText('Point(-118.4079 33.9434)'), -- LAX
-  ST_GeographyFromText('Point(139.733 35.567)'))    -- NRT (Tokyo/Narita)
-    AS geography_distance;
-```
-
-    geometry_distance | geography_distance
-    -------------------+--------------------
-     258.146005837336 |   8833954.76996256
-
-## 지리 활용
-
-지오메트리 데이터를 지오그래피 테이블에 불러오려면 먼저 EPSG:4326(경도/위도)으로 재투영한 다음 `geography`로 변환해야 합니다. `ST_Transform(geometry, srid)`은 좌표를 지리 좌표계로 변환하고, `Geography(geometry)` 함수나 `::geography` 캐스트는 자료형을 `geography`로 바꿉니다.
-
-```sql
-CREATE TABLE nyc_subway_stations_geog AS
 SELECT
-  ST_Transform(geom,4326)::geography AS geog,
-  name,
-  routes
-FROM nyc_subway_stations;
+  ST_Distance(
+    ST_GeometryFromText('Point(-118.4079 33.9434)'),
+    ST_GeometryFromText('Point(139.733 35.567)')
+  ) AS geometry_degrees,
+  ST_Distance(
+    ST_GeographyFromText('Point(-118.4079 33.9434)'),
+    ST_GeographyFromText('Point(139.733 35.567)')
+  ) AS geography_meters;
 ```
 
-지오그래피 테이블에 공간 인덱스를 만드는 방법은 지오메트리 테이블과 같습니다.
-
-```sql
-CREATE INDEX nyc_subway_stations_geog_gix
-ON nyc_subway_stations_geog USING GIST (geog);
+```text
+ geometry_degrees | geography_meters
+------------------+------------------
+ 258.146005837336 |   8833954.76996256
 ```
 
-차이점은 내부에 있습니다. 지리 색인은 극 또는 국제 날짜 변경선을 포함하는 쿼리를 올바르게 처리하지만 기하학 색인은 그렇지 않습니다.
+---
 
-다음은 엠파이어 스테이트 빌딩에서 500미터 이내에 있는 모든 지하철역을 찾는 쿼리입니다.
+## 지오그래피 테이블 생성 및 인덱싱
 
-```sql
-WITH empire_state_building AS (
-  SELECT 'POINT(-73.98501 40.74812)'::geography AS geog
-)
-SELECT name,
-  ST_Distance(esb.geog, ss.geog) AS distance,
-  degrees(ST_Azimuth(esb.geog, ss.geog)) AS direction
-FROM nyc_subway_stations_geog ss,
-     empire_state_building esb
-WHERE ST_DWithin(ss.geog, esb.geog, 500);
-```
-
-`geography` 자료형을 직접 지원하는 기본 함수는 비교적 적습니다.
-
-- `ST_AsText(geography)`는 `text`를 반환합니다.
-- `ST_GeographyFromText(text)`는 `geography`를 반환합니다.
-- `ST_AsBinary(geography)`는 `bytea`를 반환합니다.
-- `ST_GeogFromWKB(bytea)`는 `geography`를 반환합니다.
-- `ST_AsSVG(geography)`는 `text`를 반환합니다.
-- `ST_AsGML(geography)`는 `text`를 반환합니다.
-- `ST_AsKML(geography)`는 `text`를 반환합니다.
-- `ST_AsGeoJson(geography)`는 `text`를 반환합니다.
-- `ST_Distance(geography, geography)`는 `double`를 반환합니다.
-- `ST_DWithin(geography, geography, float8)`는 `boolean`를 반환합니다.
-- `ST_Area(geography)`는 `double`를 반환합니다.
-- `ST_Length(geography)`는 `double`를 반환합니다.
-- `ST_Covers(geography, geography)`는 `boolean`를 반환합니다.
-- `ST_CoveredBy(geography, geography)`는 `boolean`를 반환합니다.
-- `ST_Intersects(geography, geography)`는 `boolean`를 반환합니다.
-- `ST_Buffer(geography, float8)`는 `geography`[^1]을 반환합니다.
-- `ST_Intersection(geography, geography)`는 `geography`[^2]를 반환합니다.
-
-## 지오그래피 테이블 만들기
-
-지오그래피 열이 있는 테이블을 만드는 SQL은 지오메트리 테이블을 만드는 SQL과 매우 비슷합니다. 다만 `geography`는 테이블을 만들 때 객체 유형을 직접 지정할 수 있습니다. 예를 들면 다음과 같습니다.
+지오그래피 컬럼을 가진 테이블을 생성할 때는 `GEOGRAPHY(Type, SRID)` 문법을 사용합니다 (기본 SRID는 WGS84를 뜻하는 `4326`).
 
 ```sql
 CREATE TABLE airports (
-    code VARCHAR(3),
-    geog GEOGRAPHY(Point)
-  );
+  code VARCHAR(3),
+  geog GEOGRAPHY(Point, 4326)
+);
 
-INSERT INTO airports
-  VALUES ('LAX', 'POINT(-118.4079 33.9434)');
-INSERT INTO airports
-  VALUES ('CDG', 'POINT(2.5559 49.0083)');
-INSERT INTO airports
-  VALUES ('KEF', 'POINT(-22.6056 63.9850)');
+INSERT INTO airports VALUES
+  ('LAX', 'POINT(-118.4079 33.9434)'),
+  ('CDG', 'POINT(2.5559 49.0083)'),
+  ('KEF', 'POINT(-22.6056 63.9850)');
 ```
 
-테이블 정의에서 `GEOGRAPHY(Point)`는 공항 데이터 유형을 포인트로 지정합니다. 새 지리 필드는 `geometry_columns` 보기에 등록되지 않습니다. 대신 `geography_columns`라는 뷰에 등록됩니다.
+지오그래피 컬럼의 메타데이터는 `geometry_columns` 대신 **`geography_columns`** 뷰에 등록됩니다.
 
 ```sql
-SELECT * FROM geography_columns;
+SELECT f_table_name, f_geography_column, srid, type
+FROM geography_columns;
 ```
 
-    f_table_name    | f_geography_column | srid |   type
-    --------------------------+--------------------+------+----------
-    nyc_subway_stations_geog | geog               |    0 | Geometry
-    airports                 | geog               | 4326 | Point
+```text
+ f_table_name | f_geography_column | srid | type
+--------------+--------------------+------+-------
+ airports     | geog               | 4326 | Point
+```
 
-> [!NOTE]
-> 위 출력에서는 일부 열이 생략되었습니다.
-
-## 기하학으로 캐스팅
-
-`geography`의 기본 함수만으로도 많은 작업을 처리할 수 있지만, 때로는 `geometry`에서만 지원하는 함수가 필요합니다. 두 자료형은 서로 변환할 수 있습니다.
-
-캐스팅을 위한 PostgreSQL 구문 규칙은 캐스팅하려는 값의 끝에 `::typename`를 추가하는 것입니다. 따라서 `2::text`는 숫자 2를 텍스트 문자열 '2'로 변환합니다. 그리고 `'POINT(0 0)'::geometry`는 점의 텍스트 표현을 기하학 점으로 변환합니다.
-
-`ST_X(point)` 함수는 `geometry`만 지원합니다. 그렇다면 `geography` 값의 X 좌표는 어떻게 읽을 수 있을까요?
+지오그래피 테이블에도 동일하게 GiST 공간 인덱스를 생성할 수 있으며, 극지방과 날짜변경선을 가로지르는 쿼리도 안정적으로 가속합니다.
 
 ```sql
-SELECT code, ST_X(geog::geometry) AS longitude FROM airports;
+CREATE INDEX airports_geog_gix ON airports USING GIST (geog);
 ```
 
-    code | longitude
-    ------+-----------
-    LAX  | -118.4079
-    CDG  |    2.5559
-    KEF  |  -21.8628
+---
 
-지오그래피 값에 `::geometry`를 붙이면 객체가 SRID 4326인 지오메트리로 변환됩니다. 이제 여러 지오메트리 함수를 사용할 수 있지만, 좌표는 더 이상 구면 좌표가 아니라 데카르트 좌표로 해석된다는 점에 주의해야 합니다.
+## geometry vs geography: 언제 무엇을 써야 할까?
 
-## 항상 지오그래피를 사용하지 않는 이유
+| 비교 항목 | 지오메트리 (`geometry`) | 지오그래피 (`geography`) |
+| :--- | :--- | :--- |
+| **좌표계 모델** | 2D/3D 평면 데카르트 직교 좌표계 | 둥근 지구 타원체 (WGS84) 구면 좌표계 |
+| **거리/면적 단위** | 투영 좌표계 단위 (보통 미터 또는 피트) | 항상 **미터(m)** 및 **제곱미터($\text{m}^2$)** |
+| **연산 속도** | 단순 유클리드 기하학 공식 사용으로 **매우 빠름** | 복잡한 구면 삼각법/타원체 적분 공식으로 **연산 비용 높음** |
+| **함수 지원 범위** | 수백 종의 모든 PostGIS 공간 함수 완전 지원 | 핵심 기본 함수(거리, 버퍼, 교차 등) 위주 지원 |
+| **적합한 데이터** | 특정 시/도, 국가 단위의 **국소적 데이터셋** | 대륙 간, 전 지구적 스케일의 **글로벌 분산 데이터셋** |
 
-지리 좌표는 널리 통용됩니다. 위도와 경도의 의미는 대부분 이해하지만 UTM 좌표를 이해하는 사람은 상대적으로 적습니다. 그렇다면 왜 항상 `geography`를 사용하지 않을까요?
+> **선택 지침**:
+> - 다루는 데이터가 특정 도시, 주, 카운티 등 제한된 지역에 한정되어 있다면, 해당 지역에 최적화된 평면 투영(State Plane, UTM 등)을 적용한 **`geometry` 타입**을 사용하는 것이 성능과 기능 면에서 훨씬 유리합니다.
+> - 전 세계를 커버하거나 비행 항로, 대륙 간 거리 측정처럼 위도별 왜곡이 심한 데이터를 다룬다면 **`geography` 타입**을 사용하는 것이 안전합니다.
 
-- 첫째, 앞서 설명했듯이 `geography`를 직접 지원하는 함수는 현재 훨씬 적습니다. 이 자료형의 제약을 우회하는 데 많은 시간이 들 수 있습니다.
-- 둘째, 구에 대한 계산은 데카르트 계산보다 계산 비용이 훨씬 더 많이 듭니다. 예를 들어, 거리에 대한 데카르트 공식(피타고라스)에는 sqrt()에 대한 한 번의 호출이 포함됩니다. 거리에 대한 구형 공식(Haversine)에는 2개의 sqrt() 호출, 1개의 arctan() 호출, 4개의 sin() 호출 및 2개의 cos() 호출이 포함됩니다. 삼각함수는 매우 비용이 많이 들고 구형 계산에는 많은 함수가 포함됩니다.
+---
 
-결론은?
+## 함수 목록 (Function List)
 
-**데이터가 지리적으로 컴팩트한 경우**(주, 카운티 또는 시 내에 포함됨) 데이터에 적합한 **데카르트 투영이 있는 도형 유형을 사용**하세요. 가능한 참조 시스템을 선택하려면 <http://epsg.io> 사이트를 참조하고 지역 이름을 입력하세요.
-
-전 세계에 걸쳐 **지리적으로 넓게 분산된 데이터셋**의 거리를 측정해야 한다면 **`geography` 자료형을 사용하세요.** 애플리케이션이 단순해지는 이점이 성능상의 부담을 상쇄하며, 필요할 때 `geometry`로 캐스팅하면 대부분의 함수 제약도 해결할 수 있습니다.
-
-## 기능 목록
-
-[ST_Distance(geometry, geometry)](http://postgis.net/docs/ST_Distance.html): `geometry`에서는 두 지오메트리 사이의 2차원 데카르트 최단 거리를 투영 좌표계의 단위로 반환합니다. `geography`에서는 두 객체 사이의 회전타원체 최단 거리를 미터 단위로 반환합니다.
-
-[ST_GeographyFromText(text)](http://postgis.net/docs/ST_GeographyFromText.html): Well-Known Text 표현 또는 확장(WKT)에서 지정된 지리 값을 반환합니다.
-
-[ST_Transform(geometry, srid)](http://postgis.net/docs/ST_Transform.html): 정수 매개변수가 참조하는 SRID로 좌표가 변환된 새 기하학을 반환합니다.
-
-[ST_X(점)](http://postgis.net/docs/ST_X.html): 점의 X 좌표를 반환하거나, 사용할 수 없는 경우 NULL을 반환합니다. 입력은 포인트여야 합니다.
-
-[ST_Azimuth(geography_A, geography_B)](http://postgis.net/docs/ST_Azimuth.html): A에서 B까지의 방향을 라디안 단위로 반환합니다.
-
-[ST_DWithin(geography_A, geography_B, R)](http://postgis.net/docs/ST_DWithin.html): A가 B의 R 미터 내에 있는 경우 true를 반환합니다.
-
-**Footnotes**
-
-------------------------------------------------------------------------
-
-[^1]: 버퍼 및 교차 기능은 실제로 형상에 대한 캐스트 위에 있는 래퍼이며 기본적으로 구형 좌표에서 수행되지 않습니다. 결과적으로 평면 표현으로 완전히 변환할 수 없는 범위가 매우 큰 객체에 대해서는 올바른 결과를 반환하지 못할 수 있습니다.
-
-    예를 들어 `ST_Buffer(geography,distance)` 함수는 지리 개체를 "최상의" 투영으로 변환하고 버퍼링한 다음 다시 지리로 변환합니다. "최상의" 투영이 없는 경우(객체가 너무 큰 경우) 작업이 실패하거나 잘못된 형식의 버퍼를 반환할 수 있습니다.
-
-[^2]: 버퍼 및 교차 기능은 실제로 형상에 대한 캐스트 위에 있는 래퍼이며 기본적으로 구형 좌표에서 수행되지 않습니다. 결과적으로 평면 표현으로 완전히 변환할 수 없는 범위가 매우 큰 객체에 대해서는 올바른 결과를 반환하지 못할 수 있습니다.
-
-    예를 들어 `ST_Buffer(geography,distance)` 함수는 지리 개체를 "최상의" 투영으로 변환하고 버퍼링한 다음 다시 지리로 변환합니다. "최상의" 투영이 없는 경우(객체가 너무 큰 경우) 작업이 실패하거나 잘못된 형식의 버퍼를 반환할 수 있습니다.
+- [ST_Distance(geography, geography)](http://postgis.net/docs/ST_Distance.html): 두 지오그래피 객체 간의 회전타원체 최단 거리를 미터(m) 단위로 반환합니다.
+- [ST_DWithin(geography, geography, radius_meters)](http://postgis.net/docs/ST_DWithin.html): 두 지오그래피 객체가 지정된 반경(미터) 이내에 있는지 인덱스를 활용하여 빠르게 검사합니다.
+- [ST_Area(geography)](http://postgis.net/docs/ST_Area.html): 지오그래피 폴리곤의 면적을 제곱미터($\text{m}^2$) 단위로 반환합니다.
+- [ST_Length(geography)](http://postgis.net/docs/ST_Length.html): 지오그래피 라인의 길이를 미터(m) 단위로 반환합니다.
+- [ST_GeographyFromText(text)](http://postgis.net/docs/ST_GeographyFromText.html): WKT 문자열로부터 지오그래피 객체를 생성합니다.
+- [ST_Azimuth(geography_A, geography_B)](http://postgis.net/docs/ST_Azimuth.html): 지오그래피 A에서 B를 향하는 방위각(Azimuth)을 북쪽 기준 라디안 단위로 반환합니다.
 
 
 ---

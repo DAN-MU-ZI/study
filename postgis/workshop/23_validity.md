@@ -1,146 +1,149 @@
-# 23. 유효성 (Validity)
+# 23. 지오메트리 유효성 (Validity)
 
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/validity.html>](https://postgis.net/workshops/postgis-intro/validity.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
-"내 쿼리에서 'TopologyException' 오류가 발생하는 이유는 무엇입니까?"라는 질문에 대한 대답의 90%는 "하나 이상의 입력이 잘못되었습니다"입니다. 그렇다면 질문이 생깁니다. 유효하지 않다는 것은 무엇을 의미하며 왜 관심을 가져야 합니까?
+"공간 쿼리를 실행할 때 왜 `TopologyException` 오류가 발생할까요?"라는 질문의 90% 이상은 **"입력 데이터의 지오메트리 중 하나 이상이 OGC 유효성(Validity) 규칙을 위반했기 때문"**입니다.
 
-## 타당성이란 무엇입니까?
+포인트나 단순 선형 객체는 유효성 위반이 거의 없지만, 폐곡선과 내부 구멍 구조를 가진 **폴리곤(Polygon / MultiPolygon)**의 경우 위상학적 유효성이 매우 중요합니다.
 
-경계 영역을 정의하고 많은 구조가 필요한 다각형의 경우 유효성이 가장 중요합니다. 선은 매우 단순하며 유효하지 않을 수 없으며 점도 유효하지 않습니다.
+---
 
-다각형 타당성의 규칙 중 일부는 명백해 보이지만 다른 일부는 자의적이라고 느껴집니다(사실 임의적입니다).
+## 폴리곤 유효성 규칙 (OGC SFSQL 규격)
 
-- 다각형 링은 닫혀 있어야 합니다.
-- 구멍을 정의하는 링은 외부 경계를 정의하는 링 내부에 있어야 합니다.
-- 링은 자체 교차할 수 없습니다(스스로 접촉하거나 교차할 수 없음).
-- 링은 한 지점을 제외하고 다른 링과 접촉할 수 없습니다.
-- 다중 다각형의 요소는 서로 닿을 수 없습니다.
+OGC의 `SFSQL` 표준에 따른 폴리곤의 유효성 조건은 다음과 같습니다.
 
-마지막 세 가지 규칙은 임의의 범주에 속합니다. 동일하게 자체 일관성이 있는 다각형을 정의하는 다른 방법이 있지만 위의 규칙은 PostGIS가 준수하는 `OGC` `SFSQL` 표준에서 사용되는 규칙입니다.
+1. **닫힌 링(Closed Rings)**: 폴리곤을 구성하는 모든 링(외곽 링 및 내부 구멍 링)의 시작점과 끝점 좌표는 정확히 일치해야 합니다.
+2. **구멍의 포함성(Hole Containment)**: 모든 내부 구멍 링은 반드시 외곽 경계 링의 내부에 완전히 포함되어야 합니다.
+3. **자가 교차 금지(No Self-Intersection)**: 링의 경계선이 자기 자신과 십자로 교차하거나 꼬여서는 안 됩니다(8자 형태의 보타이(Bow-tie) 형상 금지).
+4. **링 간의 접촉 제한**: 내부 구멍 링과 외곽 링은 한 점에서만 접할 수 있으며, 선분을 공유하며 겹쳐서는 안 됩니다.
+5. **멀티폴리곤 요소 간의 분리**: 멀티폴리곤을 이루는 개별 폴리곤 요소들은 서로 겹치거나 선분으로 맞닿아서는 안 됩니다.
 
-규칙이 중요한 이유는 기하학 계산 알고리즘이 입력의 일관된 구조에 의존하기 때문입니다. 구조적 가정이 없는 알고리즘을 구축하는 것은 가능하지만 이러한 루틴은 매우 느린 경향이 있습니다. 구조가 없는 루틴의 첫 번째 단계는 *입력을 분석하고 그 안에 구조를 구축*하는 것이기 때문입니다.
+이러한 규칙이 엄격히 준수되어야만 데이터베이스의 공간 연산 엔진(GEOS)이 면적 계산, 교차, 버퍼, 클리핑 알고리즘을 신뢰성 있게 고속으로 처리할 수 있습니다.
 
-구조가 중요한 이유에 대한 예는 다음과 같습니다. 이 다각형은 유효하지 않습니다:
+---
 
-    POLYGON((0 0, 0 1, 2 1, 2 2, 1 2, 1 0, 0 0));
+## 유효하지 않은 지오메트리의 문제: 8자(Figure-Eight) 폴리곤 예시
 
-이 다이어그램에서 무효성을 좀 더 명확하게 확인할 수 있습니다.
+```text
+POLYGON((0 0, 0 1, 1 1, 2 1, 2 2, 1 2, 1 1, 1 0, 0 0))
+```
 
 ![이미지](validity/figure_eight.png)
 
-외부 링은 실제로 중앙에 자체 교차점이 있는 8자 모양입니다. 그래픽 루틴이 다각형 채우기를 성공적으로 렌더링하여 시각적으로 "영역"으로 표시됩니다. 즉, 1단위 정사각형 두 개이므로 총 면적은 2단위 면적입니다.
+위 그림처럼 중앙 $(1, 1)$ 좌표에서 스스로 꼬인 8자 형태의 폴리곤이 있다고 가정해 보겠습니다. 1×1 크기의 정사각형 2개로 이루어져 있으므로 시각적으로는 총 면적이 2가 되어야 할 것 같습니다.
 
-데이터베이스가 다각형의 영역을 어떻게 생각하는지 살펴보겠습니다.
+하지만 PostGIS에서 면적을 계산해 보면 다음과 같은 결과가 나옵니다.
 
 ```sql
-SELECT ST_Area(ST_GeometryFromText(
-         'POLYGON((0 0, 0 1, 1 1, 2 1, 2 2, 1 2, 1 1, 1 0, 0 0))'
-       ));
+SELECT ST_Area(
+  ST_GeometryFromText('POLYGON((0 0, 0 1, 1 1, 2 1, 2 2, 1 2, 1 1, 1 0, 0 0))')
+);
 ```
 
-    st_area
-    ---------
-          0
-
-왜 이런 결과가 나올까요? 면적 계산 알고리즘은 링이 자기 자신과 교차하지 않는다고 가정합니다. 정상적인 링은 경계선의 어느 한쪽에만 내부 영역이 있습니다. 어느 쪽인지는 중요하지 않지만 반드시 한쪽이어야 합니다. 그러나 유효하지 않은 8자 모양에서는 한쪽 고리의 내부가 선 오른쪽에 있고 다른 고리의 내부는 왼쪽에 있습니다. 두 고리에서 계산한 면적이 각각 1과 -1이 되어 서로 상쇄되므로 최종 면적은 0이 됩니다.
-
-## 유효성 감지
-
-이전 예에서는 **knew**가 유효하지 않은 하나의 다각형이 있었습니다. 수백만 개의 도형이 있는 테이블에서 무효성을 어떻게 감지합니까? `ST_IsValid(geometry)` 기능으로. 8자 모양에 대해 사용하면 빠른 답을 얻을 수 있습니다.
-
-```sql
-SELECT ST_IsValid(ST_GeometryFromText(
-         'POLYGON((0 0, 0 1, 1 1, 2 1, 2 2, 1 2, 1 1, 1 0, 0 0))'
-       ));
+```text
+st_area
+-------
+      0
 ```
 
-    f
+### 면적이 0이 되는 이유
+표준 면적 계산 알고리즘은 링의 정점 회전 방향(시계 방향 vs 반시계 방향)을 기준으로 외적을 적분합니다. 8자 형태로 꼬인 폴리곤은 한쪽 루프는 양의 면적($+1$), 다른 쪽 루프는 음의 면적($-1$)으로 계산되어 서로 상쇄되므로 최종 면적이 0으로 계산됩니다.
 
-이제 우리는 해당 기능이 유효하지 않다는 것을 알고 있지만 그 이유는 알 수 없습니다. `ST_IsValidReason(geometry)` 함수를 사용하여 무효화의 원인을 찾을 수 있습니다.
+---
+
+## 유효성 검사 함수: ST_IsValid & ST_IsValidReason
+
+수백만 건의 대용량 테이블에서 오류가 있는 지오메트리를 찾으려면 `ST_IsValid`와 `ST_IsValidReason`을 사용합니다.
+
+- `ST_IsValid(geometry)`: 지오메트리가 유효하면 `TRUE`, 오류가 있으면 `FALSE`를 반환합니다.
+- `ST_IsValidReason(geometry)`: 유효하지 않은 구체적인 이유와 문제가 발생한 오류 좌표 위치를 문자열로 반환합니다.
 
 ```sql
-SELECT ST_IsValidReason(ST_GeometryFromText(
-         'POLYGON((0 0, 0 1, 1 1, 2 1, 2 2, 1 2, 1 1, 1 0, 0 0))'
-       ));
+SELECT ST_IsValidReason(
+  ST_GeometryFromText('POLYGON((0 0, 0 1, 1 1, 2 1, 2 2, 1 2, 1 1, 1 0, 0 0))')
+);
 ```
 
-    Self-intersection[1 1]
+```text
+Self-intersection[1 1]
+```
 
-이유(자기교차점) 외에도 무효 위치(좌표(1 1))도 반환됩니다.
-
-`ST_IsValid(geometry)` 함수를 사용하여 테이블을 테스트할 수도 있습니다.
+### 테이블 내의 유효하지 않은 폴리곤 전수 검사
 
 ```sql
--- Find all the invalid polygons and what their problem is
 SELECT name, boroname, ST_IsValidReason(geom)
 FROM nyc_neighborhoods
 WHERE NOT ST_IsValid(geom);
 ```
 
-    name           |   boroname    |          st_isvalidreason
-    -------------------------+---------------+-----------------------------------------
-    Howard Beach            | Queens        | Self-intersection[597264.08 4499924.54]
-    Corona                  | Queens        | Self-intersection[595483.05 4513817.95]
-    Steinway                | Queens        | Self-intersection[593545.57 4514735.20]
-    Red Hook                | Brooklyn      | Self-intersection[584306.82 4502360.51]
+```text
+     name     | boroname |             st_isvalidreason
+--------------+----------+-----------------------------------------
+ Howard Beach | Queens   | Self-intersection[597264.08 4499924.54]
+ Corona       | Queens   | Self-intersection[595483.05 4513817.95]
+ Steinway     | Queens   | Self-intersection[593545.57 4514735.20]
+ Red Hook     | Brooklyn | Self-intersection[584306.82 4502360.51]
+```
 
-## 무효화 복구
+---
 
-무효성을 복구하려면 다각형을 가장 단순한 구조(고리)로 제거하고, 고리가 타당성 규칙을 따르도록 한 다음, 고리 둘러싸기 규칙을 따르는 새로운 다각형을 구축하는 작업이 포함됩니다. 결과는 직관적인 경우가 많지만 입력이 매우 잘못 동작하는 경우 유효한 출력이 사용자의 직관과 일치하지 않을 수 있습니다. 최신 버전의 PostGIS에는 지오메트리 복구를 위한 다양한 알고리즘이 포함되어 있습니다. [매뉴얼 페이지](http://postgis.net/docs/ST_MakeValid.html)를 주의 깊게 읽고 가장 마음에 드는 알고리즘을 선택하세요.
+## 유효성 자동 복구: ST_MakeValid
 
-예를 들어, 여기에 고전적인 무효성인 "바나나 다각형"이 있습니다. 이는 영역을 둘러싸지만 몸을 구부려 자체적으로 접촉하여 실제로는 구멍이 아닌 "구멍"을 남기는 단일 고리입니다.
+오류가 있는 지오메트리를 OGC 표준을 준수하는 유효한 다각형(또는 멀티폴리곤)으로 자동 재구성하려면 **`ST_MakeValid(geometry)` 함수**를 사용합니다.
 
-    POLYGON((0 0, 2 0, 1 1, 2 2, 3 1, 2 0, 4 0, 4 4, 0 4, 0 0))
+대표적인 예로 외곽 링이 안쪽으로 꺾여 스스로 맞닿아 있는 "바나나 폴리곤(Banana Polygon)"이 있습니다.
+
+```text
+POLYGON((0 0, 2 0, 1 1, 2 2, 3 1, 2 0, 4 0, 4 4, 0 4, 0 0))
+```
 
 ![image](validity/banana.png)
 
-다각형에서 [ST_MakeValid](http://postgis.net/docs/ST_MakeValid.html)를 실행하면 한 지점에 닿는 외부 링과 내부 링으로 구성된 유효한 `OGC` 다각형이 반환됩니다.
-
 ```sql
 SELECT ST_AsText(
-         ST_MakeValid(
-           ST_GeometryFromText('POLYGON((0 0, 2 0, 1 1, 2 2, 3 1, 2 0, 4 0, 4 4, 0 4, 0 0))')
-         )
-       );
+  ST_MakeValid(
+    ST_GeometryFromText('POLYGON((0 0, 2 0, 1 1, 2 2, 3 1, 2 0, 4 0, 4 4, 0 4, 0 0))')
+  )
+);
 ```
 
-    POLYGON((0 0,0 4,4 4,4 0,2 0,0 0),(2 0,3 1,2 2,1 1,2 0))
+```text
+POLYGON((0 0,0 4,4 4,4 0,2 0,0 0),(2 0,3 1,2 2,1 1,2 0))
+```
 
-> [!NOTE]
-> "바나나 폴리곤"(또는 "역 쉘")은 유효한 기하학을 위한 `OGC` 토폴로지 모델과 ESRI에서 내부적으로 사용하는 모델이 다른 경우입니다. ESRI 모델은 접촉하는 고리를 유효하지 않은 것으로 간주하고 이러한 종류의 모양에 바나나 형태를 선호합니다. OGC 모델은 그 반대입니다. 둘 다 "올바른" 것은 아니며 단지 동일한 상황을 모델링하는 다른 방법일 뿐입니다.
+`ST_MakeValid`는 맞닿은 지점을 분리하여 외곽 링과 내부 구멍 링을 가진 표준 OGC 폴리곤으로 자동 변환해 줍니다.
 
-## 일괄 유효성 복구
+---
 
-다음은 수정된 버전을 테이블에 추가하는 동안 검토를 위해 유효하지 않은 형상에 플래그를 지정하는 SQL의 예입니다.
+## 테이블 일괄 유효성 복구 실습
+
+기존 원본 지오메트리를 백업 컬럼에 보존하면서 테이블 전체의 유효하지 않은 지오메트리를 일괄 수정하는 패턴입니다.
 
 ```sql
--- Column for old invalid form
+-- 원본 형상을 보존할 백업 컬럼 추가
 ALTER TABLE nyc_neighborhoods
-  ADD COLUMN geom_invalid geometry
-  DEFAULT NULL;
+  ADD COLUMN geom_invalid geometry DEFAULT NULL;
 
--- Fix invalid and save the original
+-- 오류가 있는 지오메트리를 백업하고 ST_MakeValid로 복구
 UPDATE nyc_neighborhoods
-  SET geom = ST_MakeValid(geom),
-      geom_invalid = geom
+  SET geom_invalid = geom,
+      geom = ST_MakeValid(geom)
   WHERE NOT ST_IsValid(geom);
 
--- Review the invalid cases
-SELECT geom, ST_IsValidReason(geom_invalid)
-  FROM nyc_neighborhoods
-  WHERE geom_invalid IS NOT NULL;
+-- 수정된 지오메트리 확인
+SELECT name, ST_IsValid(geom) AS is_now_valid
+FROM nyc_neighborhoods
+WHERE geom_invalid IS NOT NULL;
 ```
 
-유효하지 않은 형상을 시각적으로 복구하기 위한 좋은 도구는 OpenJump(<http://openjump.org>)입니다. 여기에는 **도구-\>QA-\>선택한 레이어 유효성 검사** 아래에 유효성 검사 루틴이 포함되어 있습니다.
+---
 
-## 기능 목록
+## 함수 목록 (Function List)
 
-[ST_IsValid(기하학 A)](http://postgis.net/docs/ST_IsValid.html): 기하학이 유효한지 여부를 나타내는 부울을 반환합니다.
-
-[ST_IsValidReason(기하학 A)](http://postgis.net/docs/ST_IsValidReason.html): 무효 이유 및 무효 좌표가 포함된 텍스트 문자열을 반환합니다.
-
-[ST_MakeValid(기하학 A)](http://postgis.net/docs/ST_MakeValid.html): 유효성 규칙을 따르도록 재구성된 기하학을 반환합니다.
+- [ST_IsValid(geometry)](http://postgis.net/docs/ST_IsValid.html): 지오메트리가 OGC 위상 유효성 규칙을 준수하는지 검사하여 부울(Boolean) 값을 반환합니다.
+- [ST_IsValidReason(geometry)](http://postgis.net/docs/ST_IsValidReason.html): 지오메트리가 유효하지 않은 구체적인 원인과 문제가 발생한 좌표 위치를 반환합니다.
+- [ST_MakeValid(geometry)](http://postgis.net/docs/ST_MakeValid.html): 유효하지 않은 지오메트리의 정점과 링을 재구성하여 OGC 표준을 준수하는 유효한 지오메트리로 자동 복구합니다.
 
 
 ---

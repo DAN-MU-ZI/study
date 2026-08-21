@@ -1,96 +1,104 @@
-# 12. 공간 관계 연습 (Spatial Relationships Exercises)
+# 12. 공간 관계 실습 (Spatial Relationships Exercises)
 
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/spatial_relationships_exercises.html>](https://postgis.net/workshops/postgis-intro/spatial_relationships_exercises.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
-다음은 이전 절에서 살펴본 기능입니다. 연습 문제를 풀 때 참고하세요.
+앞서 학습한 공간 관계 함수들을 활용하여 다음 실습 문제를 직접 해결해 보세요.
 
-- 레코드 집합에 대한 합계를 반환하는 `sum(expression)` 집계
-- 레코드 집합의 크기를 반환하는 `count(expression)` 집계
-- `ST_Contains(geometry A, geometry B)`는 기하학 A에 기하학 B가 포함된 경우 true를 반환합니다.
-- `ST_Crosses(geometry A, geometry B)`는 형상 A가 형상 B를 교차하는 경우 true를 반환합니다.
-- `ST_Disjoint(geometry A , geometry B)`는 도형이 "공간적으로 교차"하지 않는 경우 true를 반환합니다.
-- `ST_Distance(geometry A, geometry B)`는 형상 A와 형상 B 사이의 최소 거리를 반환합니다.
-- `ST_DWithin(geometry A, geometry B, radius)`는 형상 A가 형상 B로부터 반경 거리 이하인 경우 true를 반환합니다.
-- `ST_Equals(geometry A, geometry B)`는 기하학 A가 기하학 B와 동일한 경우 true를 반환합니다.
-- `ST_Intersects(geometry A, geometry B)`는 기하학 A가 기하학 B와 교차하는 경우 true를 반환합니다.
-- `ST_Overlaps(geometry A, geometry B)`는 기하학 A와 기하학 B가 공간을 공유하지만 서로 완전히 포함되지 않은 경우 true를 반환합니다.
-- `ST_Touches(geometry A, geometry B)`는 기하학 A의 경계가 기하학 B에 닿으면 true를 반환합니다.
-- `ST_Within(geometry A, geometry B)`는 기하학 A가 기하학 B 내에 있는 경우 true를 반환합니다.
+### 실습 참조 함수 요약
+- `ST_Contains(geometry A, geometry B)`: A가 B를 완전히 포함하는지 검사
+- `ST_Crosses(geometry A, geometry B)`: A와 B가 서로 교차하는지 검사
+- `ST_Disjoint(geometry A, geometry B)`: A와 B가 완전히 떨어져 있는지 검사
+- `ST_Distance(geometry A, geometry B)`: A와 B 사이의 최단 거리 계산
+- `ST_DWithin(geometry A, geometry B, radius)`: A와 B가 지정된 반경 이내에 있는지 고속 검사
+- `ST_Equals(geometry A, geometry B)`: A와 B가 공간적으로 동일한지 검사
+- `ST_Intersects(geometry A, geometry B)`: A와 B가 공간을 공유(교차/접촉/포함)하는지 검사
+- `ST_Overlaps(geometry A, geometry B)`: 동일 차원의 A와 B가 일부 겹치는지 검사
+- `ST_Touches(geometry A, geometry B)`: A와 B의 경계가 서로 맞닿아 있는지 검사
+- `ST_Within(geometry A, geometry B)`: A가 B 내부에 완전히 포함되어 있는지 검사
 
-또한 사용 가능한 테이블을 기억하십시오.
+### 실습 대상 테이블
+- `nyc_census_blocks`: `blkid`, `popn_total`, `boroname`, `geom`
+- `nyc_streets`: `gid`, `name`, `type`, `geom`
+- `nyc_subway_stations`: `name`, `geom`
+- `nyc_neighborhoods`: `name`, `boroname`, `geom`
 
-- `nyc_census_blocks`
-  - blkid, popn_total, 보로나메, geom
-- `nyc_streets`
-  - 이름, 유형, 지리
-- `nyc_subway_stations`
-  - 이름, 기하학
-- `nyc_neighborhoods`
-  - 이름, 보로나메, 검
+---
 
-## 연습
+## 연습 문제 및 정답
 
-- **'Atlantic Commons'라는 거리의 기하학 값은 무엇입니까?**
+### 1. 'Atlantic Commons'라는 도로의 지오메트리 좌표값(WKT)은 어떻게 됩니까?
 
-  ```sql
-  SELECT ST_AsText(geom)
-    FROM nyc_streets
-    WHERE name = 'Atlantic Commons';
-  ```
+```sql
+SELECT ST_AsText(geom)
+FROM nyc_streets
+WHERE name = 'Atlantic Commons';
+```
 
-      MULTILINESTRING((586781.701577724 4504202.15314339,586863.51964484 4504215.9881701))
+```text
+MULTILINESTRING((586781.701577724 4504202.15314339,586863.51964484 4504215.9881701))
+```
 
-- **애틀랜틱 커먼즈는 어떤 지역과 자치구에 있나요?**
+---
 
-  ```sql
-  SELECT n.name, n.boroname
-  FROM nyc_neighborhoods AS n
-  JOIN nyc_streets AS s
-    ON ST_Intersects(n.geom, s.geom)
-  WHERE s.name = 'Atlantic Commons';
-  ```
+### 2. 'Atlantic Commons' 거리는 어느 근린지역(Neighborhood)과 자치구(Borough)에 위치해 있습니까?
 
-      name    | boroname
-      ------------+----------
-      Fort Green | Brooklyn
+```sql
+SELECT n.name AS neighborhood, n.boroname AS borough
+FROM nyc_neighborhoods AS n
+JOIN nyc_streets AS s
+  ON ST_Intersects(n.geom, s.geom)
+WHERE s.name = 'Atlantic Commons';
+```
 
-  > [!NOTE]
-  > "야, 왜 'MULTILINESTRING'에서 'LINESTRING'으로 바꾸셨나요?" 공간적으로는 동일한 모양을 설명하므로 단일 항목 다중 형상에서 단일 항목으로 전환하면 몇 번의 키 입력이 절약됩니다.
-  >
-  > 더 중요한 것은 읽기 쉽게 좌표를 반올림했는데 실제로 결과가 변경되었습니다. 좌표가 더 이상 정확히 동일하지 않기 때문에 ST_Touches() 조건자를 사용하여 Atlantic Commons에 합류하는 도로를 찾을 수 없었습니다.
+```text
+neighborhood |  borough
+-------------+----------
+Fort Greene  | Brooklyn
+```
 
-- **Atlantic Commons는 어떤 거리와 합류하나요?**
+---
 
-  ```sql
-  SELECT s.name
-  FROM nyc_streets AS s
-  JOIN nyc_streets AS ac
-    ON ST_DWithin(s.geom, ac.geom, 0.1)
-  WHERE ac.name = 'Atlantic Commons'
-    AND s.gid <> ac.gid;
-  ```
+### 3. 'Atlantic Commons' 도로와 직접 연결(접촉)되는 인접 도로들은 무엇입니까?
 
-      name
-      ------------------
-      S Oxford St
-      Cumberland St
+```sql
+SELECT s.name
+FROM nyc_streets AS s
+JOIN nyc_streets AS ac
+  ON ST_DWithin(s.geom, ac.geom, 0.1)
+WHERE ac.name = 'Atlantic Commons'
+  AND s.gid <> ac.gid;
+```
 
-  ![이미지](spatial_relationships/atlantic_commons.jpg)
+```text
+     name
+---------------
+ S Oxford St
+ Cumberland St
+```
 
-- **대략 얼마나 많은 사람들이 대서양 공유지(50미터 이내)에 살고 있습니까?**
+![이미지](spatial_relationships/atlantic_commons.jpg)
 
-  ```sql
-  SELECT Sum(popn_total)
-    FROM nyc_census_blocks
-    WHERE ST_DWithin(
-     geom,
-     ST_GeomFromText('LINESTRING(586782 4504202,586864 4504216)', 26918),
-     50
-    );
-  ```
+> [!NOTE]
+> `s.gid <> ac.gid` 조건은 자기 자신과의 비교를 제외하기 위해 추가되었습니다. `ST_DWithin`에 아주 작은 오차 허용치(0.1m)를 부여하면 부동소수점 정밀도 차이로 인해 `ST_Touches`가 놓칠 수 있는 연결 도로를 안정적으로 검색할 수 있습니다.
 
-      1438
+---
+
+### 4. 'Atlantic Commons' 도로로부터 50m 이내에 거주하는 인구수는 대략 몇 명입니까?
+
+```sql
+SELECT sum(popn_total) AS population
+FROM nyc_census_blocks
+WHERE ST_DWithin(
+  geom,
+  ST_GeomFromText('LINESTRING(586782 4504202, 586864 4504216)', 26918),
+  50
+);
+```
+
+```text
+1438
+```
 
 
 ---
