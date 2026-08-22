@@ -15,7 +15,7 @@ SELECT postgis_full_version();
 
 pgAdmin에서 상단의 **Query Tool** 아이콘을 클릭하여 SQL 쿼리 편집기를 엽니다.
 
-![이미지](screenshots/pgadmin_05.png)
+![pgAdmin에서 SQL을 입력하는 Query Tool 화면](screenshots/pgadmin_05.png)
 
 쿼리 창에 다음 SQL을 입력합니다.
 
@@ -25,11 +25,11 @@ SELECT name FROM nyc_neighborhoods;
 
 **Execute Query** 버튼(▶)을 클릭하거나 **F5** 키를 누릅니다.
 
-![이미지](screenshots/pgadmin_08.png)
+![SELECT 쿼리 실행 결과가 데이터 그리드에 표시된 화면](screenshots/pgadmin_08.png)
 
 쿼리가 몇 밀리초(ms) 만에 실행되고 총 129건의 결과가 반환됩니다.
 
-![image](screenshots/pgadmin_09.png)
+![지오메트리 결과를 지도에서 확인하는 pgAdmin Geometry Viewer](screenshots/pgadmin_09.png)
 
 ### SQL의 4대 핵심 명령어 (DML)
 

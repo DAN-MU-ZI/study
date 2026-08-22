@@ -22,7 +22,7 @@ INSERT INTO geometries VALUES
 SELECT name, ST_AsText(geom) FROM geometries;
 ```
 
-![이미지](geometries/start01.png)
+![점 선 면 컬렉션 예제를 삽입한 geometries 테이블의 결과](geometries/start01.png)
 
 위 예제는 `geometries`라는 테이블을 생성하고 포인트(Point), 라인스트링(LineString), 폴리곤(Polygon), 구멍(Hole)이 있는 폴리곤, 지오메트리 컬렉션(GeometryCollection) 등 5가지 기본 공간 객체를 삽입한 뒤, 텍스트 형태(WKT)로 조회한 결과입니다.
 
@@ -35,7 +35,7 @@ OGC의 `SFSQL`(Simple Features for SQL) 규격에 따라, PostGIS는 데이터�
 1. `spatial_ref_sys`: 데이터베이스가 지원하는 모든 공간 참조 체계(SRS/좌표계)의 정의가 등록된 테이블입니다.
 2. `geometry_columns`: 데이터베이스 내의 모든 지오메트리 컬럼과 해당 컬럼의 타입, 차원, SRID 메타데이터를 일목요연하게 보여주는 표준 뷰(View)입니다.
 
-![image](geometries/table01.png)
+![geometry_columns 메타데이터 테이블의 주요 컬럼](geometries/table01.png)
 
 `geometry_columns` 뷰를 조회해 보겠습니다.
 
@@ -43,7 +43,7 @@ OGC의 `SFSQL`(Simple Features for SQL) 규격에 따라, PostGIS는 데이터�
 SELECT * FROM geometry_columns;
 ```
 
-![이미지](geometries/start08.png)
+![Geometry Viewer에서 여러 지오메트리 타입을 함께 표시한 화면](geometries/start08.png)
 
 ### geometry_columns의 주요 컬럼
 - `f_table_schema`, `f_table_name`: 공간 컬럼을 보유한 테이블의 스키마와 테이블명입니다.
@@ -95,7 +95,7 @@ SELECT name, ST_GeometryType(geom), ST_NDims(geom), ST_SRID(geom)
 
 ### 1. 포인트 (Point)
 
-![image](introduction/points.png)
+![2차원 좌표 하나로 표현한 포인트 지오메트리](introduction/points.png)
 
 **포인트(Point)**는 공간상의 단일 위치(X, Y 좌표)를 나타냅니다. 도시 축척에서 지하철역, 건물 위치, 버스 정류장 등 크기나 형태보다는 위치 자체가 중요한 객체를 표현할 때 사용됩니다.
 
@@ -123,7 +123,7 @@ SELECT ST_X(geom), ST_Y(geom)
 
 ### 2. 라인스트링 (LineString)
 
-![image](introduction/lines.png)
+![순서가 있는 여러 정점을 연결한 라인스트링](introduction/lines.png)
 
 **라인스트링(LineString)**은 2개 이상의 연속된 점(정점, Vertices)으로 이루어진 선형 경로입니다. 도로망, 하천, 철도 등을 표현할 때 주로 사용됩니다.
 시작점과 끝점이 같은 라인스트링을 **닫힌 선(Closed)**이라고 하며, 자기 자신과 교차하지 않는 선을 **단순 선(Simple)**이라고 합니다.
@@ -158,7 +158,7 @@ SELECT ST_Length(geom)
 
 ### 3. 폴리곤 (Polygon / 다각형)
 
-![image](introduction/polygons.png)
+![닫힌 외곽 링과 내부 링으로 구성된 폴리곤](introduction/polygons.png)
 
 **폴리곤(Polygon)**은 2차원 면적(영역)을 표현합니다. 폴리곤의 외곽 경계선은 닫혀 있고 단순한 형태의 링(Exterior Ring)으로 정의되며, 내부에 도넛 형태의 구멍(Interior Ring / Hole)을 가질 수 있습니다. 행정구역 경계, 공원, 건물 외곽선, 호수 등을 모델링할 때 사용됩니다.
 
@@ -175,7 +175,7 @@ SELECT name, ST_AsText(geom)
  PolygonWithHole | POLYGON((0 0, 10 0, 10 10, 0 10, 0 0),(1 1, 1 2, 2 2, 2 1, 1 1))
 ```
 
-![이미지](screenshots/polygons.png)
+![외곽 링과 구멍을 포함하는 폴리곤 예제](screenshots/polygons.png)
 
 #### 폴리곤 관련 주요 함수
 - `ST_Area(geometry)`: 폴리곤의 면적을 계산합니다.
@@ -211,7 +211,7 @@ SELECT name, ST_Area(geom)
 - **MultiPolygon**: 여러 개의 면으로 이루어진 다각형 집합 (예: 여러 섬으로 구성된 하와이주 영토, 도로로 양분된 토지 필지)
 - **GeometryCollection**: 점, 선, 면 등 서로 다른 지오메트리 타입을 혼합하여 담을 수 있는 이종 컬렉션
 
-![이미지](screenshots/collection2.png)
+![여러 지오메트리를 하나로 묶은 컬렉션 구조](screenshots/collection2.png)
 
 ```sql
 SELECT name, ST_AsText(geom)
@@ -223,7 +223,7 @@ SELECT name, ST_AsText(geom)
 GEOMETRYCOLLECTION(POINT(2 0),POLYGON((0 0, 1 0, 1 1, 0 1, 0 0)))
 ```
 
-![이미지](screenshots/collection.png)
+![Geometry Viewer에 표시된 멀티 지오메트리와 컬렉션](screenshots/collection.png)
 
 #### 컬렉션 관련 주요 함수
 - `ST_NumGeometries(geometry)`: 컬렉션 내의 구성 지오메트리 개수를 반환합니다.

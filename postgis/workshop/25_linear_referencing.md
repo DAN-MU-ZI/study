@@ -3,6 +3,8 @@
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/linear_referencing.html>](https://postgis.net/workshops/postgis-intro/linear_referencing.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
+지오메트리의 유효성과 동등성을 확인하는 방법을 익혔으므로, 이제 올바른 선형 지오메트리를 실제 네트워크 업무에 활용하는 심화 응용으로 넘어갑니다.
+
 **선형 참조(Linear Referencing System, LRS)**(또는 동적 세그먼트화, Dynamic Segmentation)는 기준이 되는 선형 네트워크(도로, 철도, 하천 등)를 기준으로 특정 지점이나 구간의 위치를 **거리 측정값(Measure, M-값)**으로 표현하는 방법입니다.
 
 ### 선형 참조의 주요 활용 분야
@@ -89,7 +91,7 @@ JOIN nyc_streets AS streets
   ON (streets.gid = events.streets_gid);
 ```
 
-![이미지](screenshots/lrs1.jpg)
+![도로 중심선의 위치 비율로 지하철역 이벤트를 복원한 지도](screenshots/lrs1.jpg)
 
 위 지도에서 원래 지하철역 위치(빨간색 별)가 인접 도로 중심선 위(파란색 원)로 정확히 스냅된 것을 확인할 수 있습니다. 이는 GPS 궤적 데이터를 도로망 네트워크에 맞추어 보정(Map Matching)할 때도 매우 유용합니다.
 

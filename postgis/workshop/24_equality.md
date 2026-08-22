@@ -15,7 +15,7 @@
 
 동등성의 차이를 확인하기 위해 다음과 같은 5가지 폴리곤을 생성합니다.
 
-![image](equality/polygon-table.png)
+![정점 순서와 방향이 다른 다섯 개의 동등성 비교용 폴리곤](equality/polygon-table.png)
 
 ```sql
 CREATE TABLE polygons (id integer, name varchar, poly geometry);
@@ -42,7 +42,7 @@ SELECT a.name, b.name,
 FROM polygons AS a, polygons AS b;
 ```
 
-![이미지](equality/start14.png)
+![정점 순서까지 같은 폴리곤을 판별한 ST_OrderingEquals 결과](equality/start14.png)
 
 - Polygon 1, 2, 3은 동일한 육각형 영역을 나타내지만, 정점의 회전 방향(시계 방향 vs 반시계 방향)과 시작 정점의 위치가 다르므로 `ST_OrderingEquals`에서는 서로 다른 객체로 판정됩니다.
 - Polygon 4는 동일 선상에 중복 정점들을 포함하고 있으므로 정점 개수가 달라 불일치합니다.
@@ -61,7 +61,7 @@ SELECT a.name, b.name,
 FROM polygons AS a, polygons AS b;
 ```
 
-![이미지](equality/start15.png)
+![정점 순서와 무관하게 같은 영역을 판별한 ST_Equals 결과](equality/start15.png)
 
 - Polygon 1부터 4까지는 표현 방식만 다를 뿐 모두 정확히 동일한 육각형 영역을 나타내므로 `ST_Equals`에서 모두 `Spatially Equal`로 판정됩니다.
 - Polygon 5는 동일한 바운딩 박스를 가진 직사각형이므로 육각형과 공간이 달라 `Not Equal`로 판정됩니다.
@@ -80,7 +80,7 @@ SELECT a.name, b.name,
 FROM polygons AS a, polygons AS b;
 ```
 
-![이미지](equality/start17.png)
+![바운딩 박스가 같은 폴리곤을 판별한 물결표 등호 연산 결과](equality/start17.png)
 
 - Polygon 1부터 5까지 모두 외곽 경계 상자(X: -2~2, Y: -1.732~1.732)가 동일하므로 모두 `Equal Bounds`를 반환합니다.
 - `~=` 연산자는 공간 인덱스(GiST)를 통해 인덱스 레벨에서 매우 빠르게 동등 여부를 필터링할 때 유용합니다.

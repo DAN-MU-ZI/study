@@ -105,11 +105,11 @@ LIMIT 10;
 뉴욕 지리에 익숙한 사람이라면 브루클린의 전통적인 서민 주거지인 **Flatbush**가 상위 4위(39.6%)에 오른 점에 의문을 품을 수 있습니다.
 
 ### 원인 분석: 경계선 중복 집계
-![이미지](screenshots/centroid_neighborhood.png)
+![근린지역 경계에 걸친 인구조사구와 대표점 기반 중복 방지](screenshots/centroid_neighborhood.png)
 
 위 그림처럼 하나의 인구조사구가 두 개 이상의 동네 경계선에 걸쳐 있는 경우, `ST_Intersects`를 사용하면 해당 조사구의 통계가 **두 동네 모두에 중복 합산**됩니다.
 
-![이미지](screenshots/nyc_tracts_flatbush.jpg)
+![Flatbush 주변 인구조사구 공간 테이블의 지도 결과](screenshots/nyc_tracts_flatbush.jpg)
 
 실제 데이터에서 Flatbush 폴리곤은 거주 인구가 0명인 프로스펙트 공원(Prospect Park) 영역을 포함하고 있는데, 인접한 부촌인 Park Slope의 고학력 인구조사구 경계와 살짝 교차하면서 해당 인구가 Flatbush로 중복 합산되어 점수가 비정상적으로 왜곡된 것입니다.
 
@@ -171,7 +171,7 @@ JOIN nyc_subway_stations AS subway
 
 뉴욕시 전체 인구(약 817만 명)보다 많은 **1,085만 명**이 나옵니다. 하나의 인구조사 블록이 인접한 여러 지하철역 반경에 동시에 포함되어 중복 계산되었기 때문입니다.
 
-![이미지](screenshots/subways_buffered.png)
+![뉴욕 지하철역을 중심으로 생성한 500미터 역세권 버퍼](screenshots/subways_buffered.png)
 
 ### 해결책: CTE와 DISTINCT ON 활용
 집계하기 전에 고유한 인구조사 블록(`blkid`)만 선별합니다.

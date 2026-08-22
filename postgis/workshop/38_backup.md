@@ -14,7 +14,7 @@ PostgreSQL 데이터베이스의 백업 및 복구 전략은 데이터의 변경
 
 `pg_dump`는 데이터베이스의 스키마 정의(DDL)와 데이터(DML)를 일관된 스냅샷으로 덤프하는 CLI 유틸리티입니다.
 
-![이미지](screenshots/backup2.jpg)
+![pgAdmin에서 논리 백업 파일과 포맷을 지정하는 Backup 대화상자](screenshots/backup2.jpg)
 
 ### pg_dump의 3가지 백업 포맷
 - **Plain (`-F p`)**: 일반 텍스트 SQL 스크립트 파일. 텍스트 에디터로 수정할 수 있지만 복원 시 병렬 복원이 불가능합니다.
@@ -53,7 +53,7 @@ pg_dumpall --globals-only -U postgres > globals.sql
 
 연속 아카이빙(Continuous Archiving)은 데이터베이스의 변경 사항을 담은 WAL(미리 쓰기 로그) 파일을 실시간으로 안전한 보관소에 복사하고, 주기적인 베이스 백업(Base Backup)과 결합하여 장애 직전 시점까지 무손실 복구하는 고가용성 메커니즘입니다.
 
-![이미지](screenshots/backup5.jpg)
+![pgAdmin에서 백업 파일을 선택해 복원하는 Restore 대화상자](screenshots/backup5.jpg)
 
 ### WAL 아카이빙 활성화 (`postgresql.conf`)
 

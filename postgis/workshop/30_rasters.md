@@ -3,13 +3,19 @@
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/rasters.html>](https://postgis.net/workshops/postgis-intro/rasters.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
+앞 장까지는 점·선·면으로 이루어진 벡터 데이터를 빠르게 검색하는 방법을 다뤘습니다. 이제 PostGIS가 지원하는 또 하나의 핵심 공간 모델인 **픽셀 격자 데이터**로 분석 범위를 넓힙니다.
+
 PostGIS는 벡터 형태의 지오메트리뿐만 아니라 연속적인 격자 그리드 형태의 공간 데이터인 **래스터(Raster)** 데이터 타입을 지원합니다.
+
+![개별 좌표 피처를 저장하는 geometry, 픽셀 격자 값을 저장하는 raster, 공유 노드와 에지를 저장하는 topology 비교](spatial_models/geometry-raster-topology.png)
+
+*그림 30-1. `geometry`는 독립적인 점·선·면 좌표를, `raster`는 격자 셀과 밴드 값을, `topology`는 여러 피처가 함께 사용하는 노드·에지·페이스를 저장합니다. 이번 장은 래스터를 다루고, 다음 장부터 토폴로지를 다룹니다.*
 
 래스터 데이터는 픽셀(Pixel/Cell)과 밴드(Band)로 구성된 n차원 수치 행렬(Matrix)입니다.
 - **밴드(Band)**: 래스터가 포함하는 독립적인 행렬 레이어의 개수입니다. 예를 들어 RGB 항공사진은 Red, Green, Blue 3개 밴드를 가집니다.
 - **픽셀(Pixel)**: 각 밴드별로 특정 지점의 측정 수치(수치 표고, 온도, 반사도 등)를 저장하는 최소 격자 단위입니다.
 
-![이미지](rasters/postgis_raster.jpg)
+![벡터의 점·선·면 표현과 픽셀 격자로 이루어진 래스터 표현 비교](rasters/postgis_raster.jpg)
 
 래스터 역시 데카르트 평면 좌표계(SRID)에 지리참조(Georeferenced)되어 있으므로, 벡터 지오메트리와 자유롭게 공간 조인 및 교차 분석을 수행할 수 있습니다.
 
@@ -92,7 +98,7 @@ FROM rasters
 WHERE name = 'Hello';
 ```
 
-![이미지](rasters/hello.png)
+![문자 배열로 만든 Hello 패턴의 단일 밴드 래스터](rasters/hello.png)
 
 ---
 
@@ -124,7 +130,7 @@ FROM rasters
 WHERE name LIKE '%New York%';
 ```
 
-![이미지](rasters/hello-raster-ny-mean.png)
+![Hello 래스터를 뉴욕 경계와 결합하고 평균값으로 표시한 결과](rasters/hello-raster-ny-mean.png)
 
 > [!NOTE]
 > 래스터 병합을 수행하려면 모든 타일이 동일한 SRID, 동일한 픽셀 크기, 동일한 그리드 원점을 공유하는 **동일 정렬(Same Alignment)** 상태여야 합니다. 정렬 일치 여부는 `ST_SameAlignment(rast1, rast2)` 함수로 검사할 수 있습니다.
@@ -158,7 +164,7 @@ JOIN ST_Buffer(ST_Point(586598, 4504816, 26918), 100) AS g(geom)
 WHERE r.name LIKE '%New York%';
 ```
 
-![이미지](rasters/raster_as_geometry.png)
+![유효 픽셀 영역 전체를 폴리곤으로 변환한 ST_Polygon 결과](rasters/raster_as_geometry.png)
 
 ### 2) ST_DumpAsPolygons: 동일 값을 가진 픽셀 그룹을 폴리곤으로 추출
 `ST_DumpAsPolygons`는 동일한 수치값을 가진 인접 픽셀들을 그룹화하여 지오메트리와 픽셀 값을 함께 담은 **`geomval` 복합 타입**으로 반환합니다.
@@ -171,7 +177,7 @@ WHERE r.name LIKE '%New York%'
 GROUP BY gv.val;
 ```
 
-![이미지](rasters/st-dump-as-polygons.png)
+![같은 픽셀 값 영역을 개별 폴리곤 행으로 분해한 ST_DumpAsPolygons 결과](rasters/st-dump-as-polygons.png)
 
 ---
 
@@ -225,7 +231,7 @@ JOIN ST_Buffer(ST_Point(586598, 4504816, 26918), 1000) AS g(geom)
 CROSS JOIN ST_Clip(rast, g.geom) AS newrast;
 ```
 
-![이미지](rasters/st_colormap_ny_dem.png)
+![뉴욕 DEM 고도 래스터에 파랑 빨강 색상표를 적용한 결과](rasters/st_colormap_ny_dem.png)
 
 
 ---

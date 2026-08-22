@@ -9,11 +9,11 @@
 
 ## 1. TopoGeometry와 계층적 데이터 모델
 
-![image](topology/geomtable2topotable.png)
+![일반 geometry 테이블을 TopoGeometry 참조 테이블로 변환하는 구조](topology/geomtable2topotable.png)
 
 일반 공간 테이블이 좌표 형태의 `geometry` 컬럼을 갖는 것과 달리, 토폴로지 테이블은 위상 관계를 가리키는 `TopoGeometry` 컬럼을 사용합니다.
 
-![image](topology/topology_main_concept.png)
+![TopoGeometry가 relation 테이블을 통해 원시 요소를 참조하는 핵심 구조](topology/topology_main_concept.png)
 
 - **레이어 (Layer)**: 특정 테이블의 `TopoGeometry` 컬럼과 1:1로 매핑되는 상위 컨테이너입니다.
 - **토포지오메트리 (TopoGeometry)**: 테이블의 각 행(Feature)을 구성하는 객체 식별자입니다.
@@ -34,7 +34,7 @@
 
 ## 3. 계층적 레이어 구조 (Layer Hierarchy)
 
-![image](topology/hierarchy.png)
+![하위 TopoGeometry를 상위 레이어가 참조하는 계층 구조](topology/hierarchy.png)
 
 - **기본 레이어 (Level 0, Base Layer)**: 원시 요소(노드, 에지, 페이스)들을 직접 참조하여 구성되는 레이어 (예: 동네 레이어 `nyc_neighborhoods_t`)
 - **상위 계층 레이어 (Level 1+, Hierarchical Layer)**: 하위 레이어의 TopoGeometry들을 다시 그룹화하여 구성되는 레이어 (예: 동네들을 모아 구성한 자치구 레이어 `nyc_boros_t`)
@@ -47,7 +47,7 @@
 
 사용자 정의 토폴로지 스키마 내의 `relation` 테이블은 TopoGeometry와 이를 구성하는 TopoElement 간의 매핑을 저장합니다.
 
-![image](topology/components.png)
+![TopoGeometry를 구성하는 노드 에지 페이스 요소 관계](topology/components.png)
 
 ```text
 relation 테이블 컬럼 구성:
@@ -65,7 +65,7 @@ relation 테이블 컬럼 구성:
 
 PostGIS는 쿼리 실행 시 `TopoGeometry`를 다음과 같은 로직으로 실제 지오메트리로 복원합니다.
 
-![image](topology/read_topoelement.png)
+![relation 행에서 최종 TopoElement와 실제 형상을 복원하는 과정](topology/read_topoelement.png)
 
 1. `topology.layer` 테이블에서 해당 레이어의 **`child_id`**를 확인합니다.
 2. **`child_id`가 `NULL`인 경우 (기본 레이어)**:

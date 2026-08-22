@@ -57,7 +57,7 @@ CREATE INDEX nyc_census_blocks_geom_idx
 
 표준 데이터베이스 인덱스(B-Tree)는 1차원 정렬 순서를 기반으로 계층 트리를 만듭니다. 반면 2차원 공간 객체는 복잡한 형태를 가지므로 지오메트리 자체를 직접 트리에 넣는 대신 각 객체의 **경계 상자(Bounding Box, 바운딩 박스)**를 인덱싱합니다.
 
-![image](indexing/bbox.png)
+![복잡한 폴리곤을 단순한 바운딩 박스로 먼저 필터링하는 원리](indexing/bbox.png)
 
 위 그림에서 노란색 별과 실제로 교차하는 선은 빨간색 선 **1개**뿐입니다. 그러나 노란색 별의 경계 상자(노란색 박스)와 교차하는 경계 상자는 빨간색과 파란색 박스 **2개**입니다.
 
@@ -70,7 +70,7 @@ CREATE INDEX nyc_census_blocks_geom_idx
 
 PostGIS는 [R-Tree](http://postgis.net/docs/support/rtree.pdf) 구조를 PostgreSQL의 GiST 프레임워크 위에 구현하여 데이터의 밀도 변화와 다양한 크기의 공간 객체를 자동으로 균형 있게 분할 관리합니다.
 
-![이미지](indexing/index-01.png)
+![공간 인덱스 없이 모든 후보를 비교하는 순차 검색](indexing/index-01.png)
 
 ---
 
@@ -141,7 +141,7 @@ WHERE neighborhoods.name = 'West Village';
 
 PostgreSQL의 비용 기반 쿼리 플래너(Cost-based Query Planner)는 쿼리 실행 시 인덱스를 사용할지, 전체 스캔을 할지 지능적으로 결정합니다. 반환할 레코드 수가 테이블 전체의 상당수를 차지하는 경우, 인덱스를 경유하는 것보다 전체 테이블을 순차적으로 읽는 것이 더 빠를 수 있습니다.
 
-![이미지](indexing/index-02.png)
+![공간 인덱스로 후보를 줄인 뒤 정밀 비교하는 2단계 검색](indexing/index-02.png)
 
 쿼리 플래너가 올바른 실행 계획을 세우려면 테이블 컬럼의 데이터 분포 통계가 최신 상태로 유지되어야 합니다. 대량의 데이터를 새로 로딩하거나 삭제/수정한 후에는 반드시 **`ANALYZE` 명령**을 실행해 주어야 합니다.
 

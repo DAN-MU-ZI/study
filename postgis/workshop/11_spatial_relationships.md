@@ -19,7 +19,7 @@
 
 `ST_Equals(geometry A, geometry B)`는 두 지오메트리가 공간적으로 완전히 동일한 형태와 위치를 가지는지 검사합니다.
 
-![이미지](spatial_relationships/st_equals.png)
+![두 지오메트리가 같은 공간을 차지하는 ST_Equals 관계](spatial_relationships/st_equals.png)
 
 동일한 지오메트리 타입의 두 객체가 정확히 동일한 X, Y 좌표 구조를 가지는 경우 `TRUE`를 반환합니다.
 
@@ -57,12 +57,12 @@ Broad St
 ### ST_Intersects
 `ST_Intersects(geometry A, geometry B)`는 두 지오메트리가 공간의 일부를 조금이라도 공유(경계가 맞닿거나 내부가 겹치는 경우)하면 `TRUE`를 반환합니다.
 
-![이미지](spatial_relationships/st_intersects.png)
+![두 지오메트리가 일부 공간을 공유하는 ST_Intersects 관계](spatial_relationships/st_intersects.png)
 
 ### ST_Disjoint
 `ST_Disjoint(geometry A, geometry B)`는 `ST_Intersects`의 정반대입니다. 두 지오메트리가 서로 완전히 떨어져 있어 어떤 공간도 공유하지 않을 때 `TRUE`를 반환합니다.
 
-![이미지](spatial_relationships/st_disjoint.png)
+![두 지오메트리가 완전히 분리된 ST_Disjoint 관계](spatial_relationships/st_disjoint.png)
 
 > [!TIP]
 > 실무에서는 `ST_Disjoint` 대신 `NOT ST_Intersects`를 사용하는 것이 훨씬 효율적입니다. `ST_Intersects`는 공간 인덱스(GiST)를 통해 고속으로 처리되지만, `ST_Disjoint`는 인덱스로 후보군을 좁히기 어렵기 때문입니다.
@@ -70,12 +70,12 @@ Broad St
 ### ST_Crosses
 `ST_Crosses(geometry A, geometry B)`는 두 지오메트리가 교차하여 생성된 교집합의 차원이 두 지오메트리 중 큰 차원보다 1 작고, 교집합이 두 객체의 내부에 위치할 때 `TRUE`를 반환합니다 (예: 선과 선이 십자로 교차하여 점이 생기는 경우, 선이 폴리곤 내부를 관통하는 경우).
 
-![이미지](spatial_relationships/st_crosses.png)
+![선이 다른 지오메트리의 내부를 가로지르는 ST_Crosses 관계](spatial_relationships/st_crosses.png)
 
 ### ST_Overlaps
 `ST_Overlaps(geometry A, geometry B)`는 동일한 차원의 두 지오메트리(폴리곤과 폴리곤, 또는 선과 선)가 서로 겹치지만 어느 한쪽이 다른 쪽을 완전히 포함하지는 않을 때 `TRUE`를 반환합니다.
 
-![이미지](spatial_relationships/st_overlaps.png)
+![같은 차원의 두 지오메트리가 일부 겹치는 ST_Overlaps 관계](spatial_relationships/st_overlaps.png)
 
 #### 교차 분석 예시: Broad St 역이 위치한 근린지역 찾기
 
@@ -100,7 +100,7 @@ WHERE ST_Intersects(
 
 `ST_Touches(geometry A, geometry B)`는 두 지오메트리의 경계(Boundary)는 서로 맞닿아 있지만 내부(Interior)는 전혀 겹치지 않을 때 `TRUE`를 반환합니다.
 
-![이미지](spatial_relationships/st_touches.png)
+![내부는 겹치지 않고 경계만 맞닿는 ST_Touches 관계](spatial_relationships/st_touches.png)
 
 ---
 
@@ -108,7 +108,7 @@ WHERE ST_Intersects(
 
 `ST_Within`과 `ST_Contains`는 한 지오메트리가 다른 지오메트리 내부에 완전히 포함되어 있는지를 검사합니다.
 
-![이미지](spatial_relationships/st_within.png)
+![한 지오메트리가 다른 지오메트리 내부에 포함된 ST_Within 관계](spatial_relationships/st_within.png)
 
 - `ST_Within(geometry A, geometry B)`: 지오메트리 A가 지오메트리 B 내부에 완전히 들어있는 경우 `TRUE`를 반환합니다.
 - `ST_Contains(geometry A, geometry B)`: 지오메트리 A가 지오메트리 B를 완전히 포함하는 경우 `TRUE`를 반환합니다 (`ST_Within`과 인자 순서가 반대).
@@ -136,7 +136,7 @@ SELECT ST_Distance(
 ### ST_DWithin (인덱스 가속 반경 검색)
 "특정 객체로부터 반경 X미터 이내에 있는 모든 객체 찾기"와 같은 조건을 판별할 때 `ST_DWithin(geometry A, geometry B, distance)`을 사용합니다.
 
-![이미지](spatial_relationships/st_dwithin.png)
+![두 지오메트리가 지정 반경 이내인지 검사하는 ST_DWithin 관계](spatial_relationships/st_dwithin.png)
 
 > [!IMPORTANT]
 > `ST_Distance(A, B) < distance` 대신 반드시 **`ST_DWithin(A, B, distance)`**을 사용해야 합니다. `ST_DWithin`은 공간 인덱스(GiST)를 통해 바운딩 박스를 자동으로 확장하여 검색 대상을 고속으로 필터링하므로 수천 배 이상 빠릅니다.
@@ -163,7 +163,7 @@ WHERE ST_DWithin(
 
 실제 지도를 확인해 보면 Broad St 지하철역은 Wall St, Broad St, Nassau St가 만나는 교차로에 위치해 있음을 알 수 있습니다.
 
-![이미지](spatial_relationships/broad_st.jpg)
+![Broad St 지하철역과 주변 근린지역의 공간 관계](spatial_relationships/broad_st.jpg)
 
 ---
 

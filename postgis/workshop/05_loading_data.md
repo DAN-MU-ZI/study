@@ -11,23 +11,23 @@ PostGIS는 다양한 공간정보 라이브러리와 애플리케이션의 지�
 
 1. pgAdmin 왼쪽 브라우저 패널에서 **nyc** 데이터베이스를 마우스 오른쪽 버튼으로 클릭하고 **Restore...**를 선택합니다.
 
-   ![image](screenshots/data_loading_1.png)
+   ![pgAdmin에서 nyc 데이터베이스의 Restore 메뉴를 선택하는 화면](screenshots/data_loading_1.png)
 
 2. 워크숍 [실습 데이터 번들](https://s3.amazonaws.com/s3.cleverelephant.ca/postgis-workshop-2020.zip)을 다운로드하여 압축을 해제한 폴더로 이동한 뒤, `nyc_data.backup` 파일을 선택합니다.
 
-   ![image](screenshots/data_loading_2.png)
+   ![pgAdmin Restore 대화상자에서 nyc_data 백업 파일을 선택하는 화면](screenshots/data_loading_2.png)
 
 3. **Restore options** 탭을 클릭하고 아래로 스크롤하여 **Do not save > Owner** 항목을 **Yes**로 활성화합니다. (로컬 사용자와 덤프 생성자의 계정 불일치 방지)
 
-   ![image](screenshots/data_loading_2a.png)
+   ![Restore options에서 소유자 저장 제외 옵션을 지정하는 화면](screenshots/data_loading_2a.png)
 
 4. **Restore** 버튼을 클릭하여 복원을 실행합니다. 우측 하단 알림창에 "Process completed"가 표시되는지 확인합니다.
 
-   ![image](screenshots/data_loading_3.png)
+   ![pgAdmin에서 백업 복원을 실행하는 화면](screenshots/data_loading_3.png)
 
 5. 복원이 완료되면 **nyc** 데이터베이스를 마우스 오른쪽 버튼으로 클릭하고 **Refresh**를 실행합니다. `Schemas > public > Tables`에 로딩된 테이블 목록을 확인할 수 있습니다.
 
-   ![image](screenshots/data_loading_4.png)
+   ![복원된 nyc 공간 테이블 목록을 확인하는 pgAdmin 화면](screenshots/data_loading_4.png)
 
 > [!NOTE]
 > 데이터베이스 백업 덤프 대신 원본 Shapefile 등에서 직접 데이터를 가져오는 명령줄 도구 및 QGIS 연동을 실습하고 싶다면 이어지는 절을 진행하세요. 이미 백업 복원으로 데이터를 로딩했다면 바로 [6장. 실습 데이터 소개](06_about_data.md)로 넘어가도 좋습니다.
@@ -158,7 +158,7 @@ PROJCS["NAD83 / UTM zone 18N",
 ### QGIS DB Manager 활용
 QGIS의 내장 도구인 **DB Manager**(*Database > DB Manager*)를 사용하면 SQL 쿼리를 직접 작성하여 지도 레이어로 즉시 띄우거나, 외부 파일(Shapefile, GeoPackage, CSV 등)을 PostGIS 테이블로 GUI 환경에서 편리하게 로딩할 수 있습니다.
 
-![image](screenshots/qgis_dbmanager.png)
+![QGIS DB Manager에서 PostGIS 테이블과 SQL 결과를 확인하는 화면](screenshots/qgis_dbmanager.png)
 
 
 ---

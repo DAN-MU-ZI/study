@@ -29,7 +29,7 @@ OGC의 `SFSQL` 표준에 따른 폴리곤의 유효성 조건은 다음과 같�
 POLYGON((0 0, 0 1, 1 1, 2 1, 2 2, 1 2, 1 1, 1 0, 0 0))
 ```
 
-![이미지](validity/figure_eight.png)
+![경계가 자기 교차하여 유효하지 않은 8자형 폴리곤](validity/figure_eight.png)
 
 위 그림처럼 중앙 $(1, 1)$ 좌표에서 스스로 꼬인 8자 형태의 폴리곤이 있다고 가정해 보겠습니다. 1×1 크기의 정사각형 2개로 이루어져 있으므로 시각적으로는 총 면적이 2가 되어야 할 것 같습니다.
 
@@ -98,7 +98,7 @@ WHERE NOT ST_IsValid(geom);
 POLYGON((0 0, 2 0, 1 1, 2 2, 3 1, 2 0, 4 0, 4 4, 0 4, 0 0))
 ```
 
-![image](validity/banana.png)
+![ST_MakeValid로 자가 접촉 폴리곤을 유효한 형상으로 복구한 바나나 예제](validity/banana.png)
 
 ```sql
 SELECT ST_AsText(

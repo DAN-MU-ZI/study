@@ -3,6 +3,8 @@
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/projection.html>](https://postgis.net/workshops/postgis-intro/projection.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
+앞 장에서는 공간 조인을 빠르게 실행하는 인덱스를 살펴보았습니다. 그러나 연산 속도가 빨라도 서로 다른 좌표계를 그대로 비교하면 결과가 틀릴 수 있으므로, 이제 공간 분석의 정확성을 좌우하는 **좌표계와 투영**을 다룹니다.
+
 지구는 둥근 회전타원체(Spheroid/Geoid) 형태이므로, 왜곡 없이 2차원 평면 지도나 모니터 화면에 그대로 옮길 수 없습니다. 이 때문에 용도와 지역에 따라 다양한 **지도 투영법(Map Projections)**이 개발되었습니다.
 
 - **등적 투영(Equal-Area)**: 면적의 비율을 정확히 보존합니다 (면적 비교 및 통계 분석에 적합).

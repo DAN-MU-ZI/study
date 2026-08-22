@@ -72,7 +72,7 @@ GRANT INSERT, UPDATE, DELETE ON nyc_streets TO app1;
 
 pgAdmin 및 클라이언트 연결 설정에서 SSL 모드를 `require` 또는 `verify-full`로 지정하여 안전하게 통신합니다.
 
-![이미지](screenshots/ssl_props.jpg)
+![PostgreSQL 서버 연결에서 SSL 속성을 설정하는 화면](screenshots/ssl_props.jpg)
 
 ### 2) pgcrypto 모듈을 통한 컬럼 레벨 암호화
 민감한 개인정보나 기밀 공간 속성은 `pgcrypto` 확장의 대칭키 암호화(AES, Blowfish)로 암호화하여 저장할 수 있습니다.

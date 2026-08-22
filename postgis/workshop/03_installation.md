@@ -20,7 +20,7 @@ Windows 환경에서의 설치 절차:
 4. 설치가 완료된 후 함께 실행되는 **StackBuilder** 프로그램을 시작합니다.
 5. 카테고리 중 **Spatial Extensions** 항목을 펼치고 최신 버전의 **PostGIS .. Bundle**을 선택합니다.
 
-   ![image](screenshots/install_windows_01.png)
+   ![Windows용 PostgreSQL 설치 프로그램 다운로드 화면](screenshots/install_windows_01.png)
 
 6. 기본 설정값을 유지하면서 PostGIS 확장 번들 설치를 완료합니다.
 
@@ -31,12 +31,12 @@ macOS 환경에서의 설치 절차:
 1. [Postgres.app 공식 사이트](https://postgresapp.com/)로 이동하여 최신 버전을 다운로드합니다.
 2. 다운로드한 `.dmg` 디스크 이미지를 열고 **Postgres** 아이콘을 **Applications**(응용 프로그램) 폴더로 드래그합니다.
 
-   ![image](screenshots/install_macos_01.png)
+   ![macOS용 PostgreSQL 설치 패키지 선택 화면](screenshots/install_macos_01.png)
 
 3. **Applications** 폴더에서 **Postgres**를 더블 클릭하여 서버를 실행합니다.
 4. **Initialize** 버튼을 클릭하여 새 데이터베이스 클러스터를 초기화합니다.
 
-   ![image](screenshots/install_macos_02.png)
+   ![macOS PostgreSQL 애플리케이션 실행 화면](screenshots/install_macos_02.png)
 
 5. 터미널(Terminal)을 열고 편리한 명령줄 도구 사용을 위해 `PATH` 환경 변수를 설정합니다.
 
@@ -52,7 +52,7 @@ pgAdmin은 <https://www.pgadmin.org/download/>에서 플랫폼별 설치 파일�
 1. 사용 중인 운영체제에 맞는 최신 버전을 다운로드하여 설치합니다.
 2. 설치 완료 후 **pgAdmin**을 실행합니다.
 
-![image](screenshots/install_pgadmin_01.png)
+![pgAdmin 다운로드 페이지의 운영체제별 설치 항목](screenshots/install_pgadmin_01.png)
 
 
 ---

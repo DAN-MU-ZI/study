@@ -3,6 +3,8 @@
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/de9im.html>](https://postgis.net/workshops/postgis-intro/de9im.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
+선형 참조가 선 위의 위치를 수치로 표현했다면, 이번 장에서는 점·선·면 사이의 관계 자체를 하나의 일관된 규칙으로 표현합니다.
+
 **차원 확장 9-교차 모델(DE-9IM, Dimensionally Extended 9-Intersection Model)**은 두 공간 객체 간의 위상학적 관계를 정밀하게 표현하고 분석하기 위한 수학적 프레임워크입니다.
 
 ---
@@ -20,12 +22,12 @@
   - 내부(I): 링으로 둘러싸인 2차원 면적 영역 (차원: 2)
   - 경계(B): 폐곡선 링 선분 자체 (차원: 1)
   - 외부(E): 폴리곤 바깥의 모든 2차원 공간 (차원: 2)
-  ![image](screenshots/de9im1.jpg)
+  ![폴리곤의 내부 경계 외부를 구분한 DE-9IM 구성](screenshots/de9im1.jpg)
 - **라인스트링(LineString)**:
   - 내부(I): 양 끝점을 제외한 선분 경로 (차원: 1)
   - 경계(B): 시작점과 끝점 2개의 정점 (차원: 0)
   - 외부(E): 선 바깥의 모든 2차원 평면 공간 (차원: 2)
-  ![image](screenshots/de9im2.jpg)
+  ![라인스트링의 내부 경계 외부를 구분한 DE-9IM 구성](screenshots/de9im2.jpg)
 - **포인트(Point)**:
   - 내부(I): 점 자체 (차원: 0)
   - 경계(B): 존재하지 않음(공집합, $\emptyset$ / F)
@@ -49,7 +51,7 @@
 - **`0`**: 0차원 점으로 교차 (Point)
 - **`F`**: 교차하지 않음 (공집합, False / Empty)
 
-![image](screenshots/de9im3.jpg)
+![두 공간 객체의 내부 경계 외부 교차를 배치한 3 곱하기 3 행렬](screenshots/de9im3.jpg)
 
 ---
 
@@ -94,7 +96,7 @@ DE-9IM의 진정한 강점은 표준 공간 술어(`ST_Intersects`, `ST_Contains
 
 > **비즈니스 규칙**: "정상적인 선착장(Dock)은 한쪽 끝이 호수(Lake) 경계에 닿아 있고, 몸체는 호수 내부에 완전히 들어가 있어야 한다."
 
-![image](screenshots/de9im7.jpg)
+![호수와 부두의 관계를 DE-9IM 패턴으로 구분한 예제](screenshots/de9im7.jpg)
 
 이 조건을 DE-9IM 행렬로 도출하면 `1*F00F212` 패턴이 됩니다.
 

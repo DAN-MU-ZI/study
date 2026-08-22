@@ -40,7 +40,7 @@ LIMIT 3;
  17436 | Nassau St | 1.3368280241070414
 ```
 
-![이미지](screenshots/knn5.png)
+![Broad St 지하철역에서 가까운 도로를 KNN 순서로 표시한 지도](screenshots/knn5.png)
 
 ### EXPLAIN으로 인덱스 스캔 실행 계획 확인
 
@@ -87,7 +87,7 @@ CROSS JOIN LATERAL (
 ) AS streets;
 ```
 
-![이미지](screenshots/knn4.png)
+![각 지하철역과 가장 가까운 도로를 LATERAL KNN 조인으로 연결한 결과](screenshots/knn4.png)
 
 `CROSS JOIN LATERAL`은 지하철역 테이블의 491개 행을 하나씩 순회하면서, 내부의 도로 테이블 서브쿼리에 공간 인덱스 스캔을 적용하므로 491개의 최근접 매칭을 순식간에 완료합니다.
 

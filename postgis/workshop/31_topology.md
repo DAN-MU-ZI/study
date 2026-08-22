@@ -3,6 +3,8 @@
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/topology.html>](https://postgis.net/workshops/postgis-intro/topology.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
+래스터가 공간을 픽셀 격자로 표현한다면, 토폴로지는 벡터 객체 사이의 **공유 경계와 연결 관계**를 명시적으로 저장합니다. 이번 장에서는 좌표 형상뿐 아니라 객체 간 구조적 관계까지 관리하는 모델을 살펴봅니다.
+
 PostGIS는 **`postgis_topology` 확장**을 통해 ISO SQL/MM Topo-Geo 및 Topo-Net 규격을 준수하는 위상학적 공간 데이터 모델링을 지원합니다.
 
 일반 지오메트리(`geometry`)는 각 객체가 서로 독립적으로 존재하므로, 인접한 두 필지나 행정구역의 경계를 수정할 때 미세한 틈(Gap)이나 겹침(Sliver Polygon)이 쉽게 발생합니다. 반면 **토폴로지(Topology)** 모델에서는 인접한 면들이 동일한 경계선(에지/Edge)을 공유하므로, 경계선을 한 번만 수정하면 인접한 모든 객체에 수정 사항이 자동으로 반영되어 데이터의 무결성을 완벽하게 유지할 수 있습니다.
@@ -99,7 +101,7 @@ FROM nyc_neighborhoods_t AS n
 GROUP BY n.boroname;
 ```
 
-![이미지](topology/boros_topogeom.png)
+![근린지역 TopoGeometry를 계층적으로 결합해 만든 자치구 경계](topology/boros_topogeom.png)
 
 ---
 

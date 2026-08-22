@@ -29,7 +29,7 @@ PostGIS는 대표적인 공간 데이터베이스(Spatial Database)입니다. Or
 
 공간 데이터베이스는 공간 데이터를 RDBMS 엔진 내부와 완전히 통합합니다. 이를 통해 시스템의 중심축이 'GIS 중심'에서 '데이터베이스 중심'으로 전환되었습니다.
 
-![image](introduction/beginning.png)
+![초기 GIS가 공간 데이터 파일과 속성 데이터베이스를 분리해 관리하던 구조](introduction/beginning.png)
 
 > [!NOTE]
 > 공간 데이터베이스 관리 시스템은 지리 정보 외에도 다양한 분야에 활용될 수 있습니다. 인체 해부학 모델링, 대규모 집적 회로(VLSI) 설계, 분자 구조 시각화, 전자기장 해석 등 2차원/3차원 공간 좌표를 다루는 모든 데이터 관리에 활용됩니다.
@@ -38,7 +38,7 @@ PostGIS는 대표적인 공간 데이터베이스(Spatial Database)입니다. Or
 
 일반 데이터베이스에는 문자열(String), 숫자(Number), 날짜(Date) 등의 기본 타입이 있습니다. 공간 데이터베이스는 여기에 **지리적 피처(Geographic Feature)**를 표현하기 위한 추가 공간 타입을 제공합니다. 이러한 공간 데이터 타입은 경계, 차원, 좌표 등의 공간 구조를 추상화하고 캡슐화합니다.
 
-![image](introduction/hierarchy.png)
+![공간 데이터 타입이 점 선 면과 컬렉션으로 확장되는 계층 구조](introduction/hierarchy.png)
 
 공간 데이터 타입은 객체지향적 타입 계층 구조(Type Hierarchy)로 구성됩니다. 각 하위 타입은 상위 타입의 구조(속성)와 동작(메서드/함수)을 상속받습니다.
 
@@ -52,7 +52,7 @@ B-트리는 값의 자연스러운 정렬 순서(Natural Sorting Order: 작다, 
 
 **경계 상자(Bounding Box, 바운딩 박스)**는 주어진 공간 피처를 완전히 감싸는 좌표축에 평행한 가장 작은 직사각형(MBR, Minimum Bounding Rectangle)입니다.
 
-![image](introduction/boundingbox.png)
+![복잡한 지오메트리를 둘러싸는 최소 경계 상자](introduction/boundingbox.png)
 
 경계 상자를 사용하는 이유는 복잡한 다각형의 정확한 포함 여부를 계산하는 것은 비용이 매우 크지만, 단순한 직사각형끼리의 교차 여부를 판별하는 것은 극도로 빠르기 때문입니다. 아무리 복잡한 다각형이나 라인스트링이라도 간단한 4개 좌표(Xmin, Ymin, Xmax, Ymax)의 경계 상자로 단순화할 수 있습니다.
 

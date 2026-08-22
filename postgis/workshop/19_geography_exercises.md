@@ -64,6 +64,10 @@ total_length_meters
 
 ### 3. 점 `POINT(1 2.0001)`은 사각형 `POLYGON((0 0, 0 2, 2 2, 2 0, 0 0))`과 교차합니까? `geography`와 `geometry`에서 결과가 서로 다르게 나오는 이유는 무엇입니까?
 
+![평면 geometry에서는 폴리곤 밖에 있지만 구면 geography에서는 대권 경계 안에 포함되는 POINT(1 2.0001) 비교](geography/geometry-geography-intersection.png)
+
+*그림 19-1. `geometry`의 윗변은 $Y=2$인 직선이므로 점이 바깥에 있지만, `geography`의 같은 두 끝점을 잇는 경계는 북쪽으로 휘는 대권 호이므로 점이 폴리곤 내부에 놓입니다.*
+
 ```sql
 -- 지오그래피 (구면 대권 경로)
 SELECT ST_Intersects(

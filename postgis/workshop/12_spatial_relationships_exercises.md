@@ -77,7 +77,7 @@ WHERE ac.name = 'Atlantic Commons'
  Cumberland St
 ```
 
-![이미지](spatial_relationships/atlantic_commons.jpg)
+![Atlantic Commons 도로와 주변 도로 근린지역 인구조사 블록](spatial_relationships/atlantic_commons.jpg)
 
 > [!NOTE]
 > `s.gid <> ac.gid` 조건은 자기 자신과의 비교를 제외하기 위해 추가되었습니다. `ST_DWithin`에 아주 작은 오차 허용치(0.1m)를 부여하면 부동소수점 정밀도 차이로 인해 `ST_Touches`가 놓칠 수 있는 연결 도로를 안정적으로 검색할 수 있습니다.

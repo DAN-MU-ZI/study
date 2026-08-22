@@ -3,6 +3,8 @@
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/geometry_returning.html>](https://postgis.net/workshops/postgis-intro/geometry_returning.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
+앞 장까지는 분석 범위에 맞춰 `geometry`와 `geography`를 선택하고 거리·길이·관계를 계산했습니다. 이제 선택한 공간 타입의 형상을 직접 변형하여 새로운 분석 대상을 만드는 단계로 넘어갑니다.
+
 지금까지 다룬 공간 함수들은 입력 지오메트리의 형태를 바꾸지 않고 속성을 측정(`ST_Area`, `ST_Length`)하거나, 포맷을 직렬화(`ST_AsText`)하거나, 공간적 관계를 검사(`ST_Intersects`, `ST_Contains`)하는 용도였습니다.
 
 이번 장에서 다룰 **지오메트리 생성 및 가공 함수(Geometry Constructing Functions)**는 기존 지오메트리를 입력받아 새로운 형태의 지오메트리(중심점, 버퍼 영역, 교집합, 합집합 등)를 연산하여 출력합니다.
@@ -16,7 +18,7 @@
 - **`ST_Centroid(geometry)`**: 입력 지오메트리의 기하학적 무게중심(질량 중심) 점을 반환합니다. 계산 속도가 매우 빠르지만, 'C'자 형태나 도넛 형태처럼 오목한(Concave) 폴리곤의 경우 무게중심이 폴리곤 외부에 위치할 수 있습니다.
 - **`ST_PointOnSurface(geometry)`**: 계산 결과 점이 **반드시 입력 폴리곤 내부에 위치함이 보장**되는 대표점을 반환합니다. 공간 조인의 중복을 방지하는 프록시 포인트로 사용하기에 가장 안전합니다.
 
-![image](geometry_returning/centroid.jpg)
+![오목한 폴리곤의 외부에 놓일 수 있는 중심점과 내부가 보장되는 표면점 비교](geometry_returning/centroid.jpg)
 
 ```sql
 -- 오목한 'C'자 형태의 폴리곤에서 Centroid와 PointOnSurface 비교
@@ -42,7 +44,7 @@ FROM (VALUES
 
 `ST_Buffer(geometry, distance)`는 입력 지오메트리와 버퍼 반경 거리를 받아 해당 거리만큼 확장된 외곽 폴리곤을 생성합니다.
 
-![image](geometry_returning/st_buffer.png)
+![점 선 면 주위에 거리 기반 완충 구역을 생성하는 ST_Buffer](geometry_returning/st_buffer.png)
 
 > **활용 예시**: 미국 국립공원관리청이 자유의 여신상이 위치한 리버티 섬(Liberty Island) 주변 500m 해상 통제 구역을 설정하는 경우
 
@@ -54,11 +56,11 @@ FROM nyc_census_blocks
 WHERE blkid = '360610001001001';
 ```
 
-![image](geometry_returning/liberty_positive.jpg)
+![자유의 섬 주변에 생성한 양수 거리 외부 버퍼](geometry_returning/liberty_positive.jpg)
 
 `ST_Buffer`에 음수(`-`) 거리를 입력하면 폴리곤 내부로 축소된 내접 폴리곤(Inscribed Polygon)을 생성합니다. (점이나 선에 음수 버퍼를 적용하면 빈 지오메트리가 반환됩니다.)
 
-![image](geometry_returning/liberty_negative.jpg)
+![자유의 섬 폴리곤을 안쪽으로 축소한 음수 거리 버퍼](geometry_returning/liberty_negative.jpg)
 
 ---
 
@@ -78,7 +80,7 @@ SELECT ST_AsText(
 );
 ```
 
-![image](geometry_returning/intersection.jpg)
+![두 폴리곤이 공통으로 차지하는 영역을 추출한 ST_Intersection](geometry_returning/intersection.jpg)
 
 ---
 
@@ -98,7 +100,7 @@ SELECT ST_AsText(
 );
 ```
 
-![image](geometry_returning/union.jpg)
+![인접 폴리곤의 공통 경계를 제거해 병합한 ST_Union](geometry_returning/union.jpg)
 
 ### 2) 집계 함수 버전: `ST_Union(geometry set)`
 `GROUP BY`와 함께 사용하여 그룹에 속한 수많은 행의 지오메트리를 하나로 병합합니다.
@@ -117,7 +119,7 @@ FROM nyc_census_blocks
 GROUP BY countyid;
 ```
 
-![image](geometry_returning/union_counties.png)
+![여러 카운티 폴리곤을 하나의 영역으로 집계 병합한 결과](geometry_returning/union_counties.png)
 
 병합 전후의 면적을 비교하면 지오메트리가 소실 없이 정확하게 합쳐졌음을 검증할 수 있습니다.
 

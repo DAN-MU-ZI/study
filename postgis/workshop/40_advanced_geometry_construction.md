@@ -3,9 +3,12 @@
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/advanced_geometry_construction.html>](https://postgis.net/workshops/postgis-intro/advanced_geometry_construction.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
+> [!NOTE]
+> 34장부터 39장까지의 운영·관리 주제를 마치고, 본편의 마지막 장에서는 지금까지 익힌 SQL, 최근접 탐색, 공간 함수, 지오메트리 생성을 결합한 **종합 실습(캡스톤)**을 수행합니다.
+
 `nyc_subway_stations` 레이어는 점(Point) 데이터로만 이루어져 있어 지하철 노선의 실제 선형 경로를 한눈에 파악하기 어렵습니다.
 
-![이미지](advanced_geometry_construction/adv_geom0.jpg)
+![노선 선형 없이 지하철역 포인트만 표시된 초기 데이터](advanced_geometry_construction/adv_geom0.jpg)
 
 이번 장에서는 PostgreSQL의 **재귀적 공통 테이블 표현식(Recursive CTE)**, **배열 함수(Array Functions)**, 그리고 PostGIS의 **`ST_MakeLine`**을 결합하여, **순서가 없는 역 포인트들로부터 실제 지하철 노선 선형(LineString)을 자동으로 생성**하는 고급 알고리즘을 구현해 보겠습니다.
 
@@ -22,7 +25,7 @@
 
 *그림 40-1. 먼저 `routes`에 Q가 포함된 역만 남기고 `gid = 304`를 시작점과 방문 목록으로 설정합니다. 재귀 CTE는 방문하지 않은 역 중 현재 역과 가장 가까운 역을 선택해 `idlist`에 추가하며, 마지막에 `ST_MakeLine`이 이 순서대로 포인트를 연결합니다. 전체 노선 생성에서는 노선별 중심에서 가장 먼 역을 시작점으로 정해 같은 함수를 반복 적용합니다. 지도와 연결 경로는 알고리즘을 설명하는 개념도입니다.*
 
-![이미지](advanced_geometry_construction/adv_geom1.jpg)
+![Q 노선의 시작 종착역 후보를 찾는 최근접 탐색 결과](advanced_geometry_construction/adv_geom1.jpg)
 
 ---
 
@@ -57,7 +60,7 @@ SELECT ST_MakeLine(geom) AS geom
 FROM next_stop;
 ```
 
-![이미지](advanced_geometry_construction/adv_geom3.jpg)
+![재귀 탐색으로 순서가 결정된 Q 노선 역 포인트](advanced_geometry_construction/adv_geom3.jpg)
 
 ---
 
@@ -66,7 +69,7 @@ FROM next_stop;
 ### 단계 1: 노선별 시작 종착역 자동 판별 (중심점에서 가장 먼 역)
 각 노선에 속한 모든 역의 무게중심(`ST_Centroid(ST_Collect(geom))`)을 계산하고, 중심점으로부터 가장 멀리 떨어진 역을 시작 종착역으로 자동 선정합니다.
 
-![이미지](advanced_geometry_construction/adv_geom4.jpg)
+![ST_MakeLine으로 연결한 Q 지하철 노선 LineString](advanced_geometry_construction/adv_geom4.jpg)
 
 ### 단계 2: 노선 경로 생성 함수 정의
 
@@ -146,7 +149,7 @@ ALTER TABLE nyc_subway_lines ADD PRIMARY KEY (gid);
 
 QGIS에서 완성된 `nyc_subway_lines` 테이블을 불러오면 뉴욕시 지하철 전체 노선망이 아름다운 선형 네트워크로 완벽하게 렌더링됩니다.
 
-![이미지](advanced_geometry_construction/adv_geom5.jpg)
+![24개 지하철 노선을 자동 생성해 렌더링한 최종 노선망](advanced_geometry_construction/adv_geom5.jpg)
 
 
 ---

@@ -3,15 +3,17 @@
 > 공식 원문: [<https://postgis.net/workshops/postgis-intro/clusterindex.html>](https://postgis.net/workshops/postgis-intro/clusterindex.html)\
 > 공식 소스의 본문·표·SQL·이미지를 현재 페이지 순서대로 반영했습니다.
 
+앞 장의 DE-9IM으로 공간 관계를 정밀하게 판정할 수 있게 되었습니다. 이제 같은 판정을 반복하는 대규모 작업에서 데이터 페이지를 더 효율적으로 읽도록 **물리적 저장 순서**를 최적화해 봅니다.
+
 데이터베이스의 쿼리 성능은 저장 장치(디스크/SSD/메모리)에서 필요한 데이터 페이지를 얼마나 빠르고 효율적으로 읽어오느냐에 직결됩니다.
 
 데이터는 테이블에 삽입(INSERT)되는 순서대로 디스크 블록에 기록되기 때문에, 실제 물리적 저장 순서와 공간 쿼리에서 함께 조회되는 데이터의 지리적 인접성 사이에는 일치성이 없을 수 있습니다.
 
-![image](screenshots/clustering1.jpg)
+![삽입 순서대로 흩어져 저장된 공간 레코드의 디스크 페이지](screenshots/clustering1.jpg)
 
 **클러스터링(Clustering)**은 함께 조회될 확률이 높은 레코드들을 디스크 및 메모리 페이지 상에서 물리적으로 서로 인접하게 정렬하여 저장하는 최적화 기법입니다.
 
-![image](screenshots/clustering2.jpg)
+![지리적으로 가까운 레코드를 같은 페이지에 모은 클러스터링 결과](screenshots/clustering2.jpg)
 
 ---
 
@@ -36,7 +38,7 @@ CLUSTER nyc_census_blocks USING nyc_census_blocks_geom_idx;
 
 **결론은 "매우 유효하다"입니다.**
 
-![image](screenshots/clustering5.png)
+![클러스터링 전후의 디스크 읽기와 캐시 적중 차이](screenshots/clustering5.png)
 
 최신 CPU와 운영체제는 RAM과 CPU 코어 사이에 L1, L2, L3 캐시 메모리를 두고 64바이트 단위의 캐시 라인(Cache Line)과 8KB 단위의 메모리 페이지로 데이터를 주고받습니다. 지리적으로 인접한 공간 데이터가 동일한 메모리 페이지에 모여 있으면, 한 번의 I/O로 연관된 수십 개의 피처가 CPU 캐시로 동시에 적재되어 **캐시 적중률(Cache Hit Ratio)**이 비약적으로 향상됩니다.
 

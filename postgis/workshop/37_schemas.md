@@ -7,7 +7,7 @@
 
 PostgreSQL의 **스키마(Schema)**는 파일 시스템의 폴더처럼 데이터베이스 객체들을 논리적으로 분리하여 담는 네임스페이스(Namespace)입니다.
 
-![이미지](screenshots/schemas.jpg)
+![public과 사용자별 스키마로 데이터베이스 객체를 분리한 구조](screenshots/schemas.jpg)
 
 ---
 
