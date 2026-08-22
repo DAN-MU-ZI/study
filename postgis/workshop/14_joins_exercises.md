@@ -22,15 +22,15 @@
 - `nyc_subway_stations`: `name`, `routes`, `geom`
 - `nyc_neighborhoods`: `name`, `boroname`, `geom`
 
-![네 가지 공간 조인 실습에서 현실 공간이 테이블과 공간 함수 및 결과로 이어지는 전체 흐름](joins_exercises/query-flow-overview.png)
-
-*그림 14-1. 실제 지도에서 근린지역은 폴리곤, 역은 포인트, 인구조사 블록은 작은 폴리곤으로 표현됩니다. 각 문제는 현실 객체의 `geom`을 `ST_Contains` 또는 `ST_Intersects`로 연결한 뒤, 필터링·중복 제거·집계를 거쳐 질문에 맞는 결과를 만듭니다. 지도는 학습용 개념도이며 실제 축척·경계를 나타내지 않습니다.*
-
 ---
 
 ## 연습 문제 및 정답
 
 ### 1. 'Little Italy' 근린지역에는 어떤 지하철역이 있으며, 어느 지하철 노선이 지나갑니까?
+
+![Little Italy 근린지역 경계와 안팎의 익명 지하철역 포인트](joins_exercises/little-italy-query-target.png)
+
+*그림 14-1. 강조된 근린지역과 지하철역 포인트의 포함 관계를 확인합니다. 역 이름과 노선 정보는 표시하지 않았습니다.*
 
 ```sql
 SELECT s.name AS station_name, s.routes
@@ -51,6 +51,10 @@ Spring St    | 6
 ### 2. 6번 지하철 노선(6-Train)이 경유하는 모든 근린지역과 자치구는 어디입니까?
 
 *(힌트: `nyc_subway_stations` 테이블의 `routes` 컬럼에는 `B,D,6,V`, `4,5,6`과 같은 문자열이 저장되어 있습니다.)*
+
+![6번 지하철 노선과 이름을 표시하지 않은 근린지역 경계](joins_exercises/route-6-query-target.png)
+
+*그림 14-2. 6번 노선의 역 포인트와 근린지역 경계가 만나는 상황만 표시했습니다. 근린지역과 자치구 이름은 표시하지 않았습니다.*
 
 ```sql
 SELECT DISTINCT n.name AS neighborhood, n.boroname AS borough
@@ -87,6 +91,10 @@ WHERE strpos(s.routes, '6') > 0;
 
 ### 3. 9/11 테러 직후 'Battery Park' 근린지역이 며칠간 통제되었을 때, 대피해야 했던 해당 지역 거주 인구는 총 몇 명입니까?
 
+![Battery Park 대상 영역과 경계를 가로지르는 인구조사 블록 격자](joins_exercises/battery-park-query-target.png)
+
+*그림 14-3. 통제 대상 영역과 인구조사 블록의 교차 관계만 표시했습니다. 인구 값과 집계 결과는 표시하지 않았습니다.*
+
 ```sql
 SELECT sum(c.popn_total) AS evacuated_population
 FROM nyc_neighborhoods AS n
@@ -104,6 +112,10 @@ WHERE n.name = 'Battery Park';
 ### 4. 뉴욕시에서 인구 밀도($\text{명}/\text{km}^2$)가 가장 높은 근린지역 상위 2곳은 어디입니까?
 
 *(힌트: $1\text{km}^2 = 1,000,000\text{m}^2$입니다.)*
+
+![이름과 순위 없이 표시한 근린지역 경계와 인구조사 블록 격자](joins_exercises/population-density-query-target.png)
+
+*그림 14-4. 인구 밀도를 계산할 근린지역과 인구조사 블록의 공간 단위만 표시했습니다. 색상은 밀도나 순위를 뜻하지 않습니다.*
 
 ```sql
 SELECT
